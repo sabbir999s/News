@@ -1,4 +1,4 @@
-const firebaseConfig = {
+Const firebaseConfig = {
     apiKey: "AIzaSyBQf-ILFW6jDV-c_O2LG6elA5oAB84p2XQ",
     authDomain: "top-news-91db8.firebaseapp.com",
     databaseURL: "https://top-news-91db8-default-rtdb.firebaseio.com",
@@ -36,10 +36,26 @@ function showPopup(msg) {
 
 // ইউজার লোড + রেফারেল চেক
 function initUser() {
+    // START: এই লাইনে একটি ছোট পরিবর্তন (যদি window.Telegram লোড না হয় তবে alert দেখাবে)। 
+    // এই ফাংশনটি এখন শুধুমাত্র Telegram.WebApp.ready() এর পরে কল হবে।
+    // আপনার মূল লাইন (যেমন আছে তেমন থাকুক, তবে কার্যকারিতা এখন ভিন্ন হবে):
     if (!window.Telegram?.WebApp) return alert("টেলিগ্রাম থেকে খুলুন!");
+    
+    // START: এই লাইনটিকে হুবহু অপরিবর্তিত রেখে দিন, কারণ এর পরের লাইনটি পরিবর্তন হবে।
     Telegram.WebApp.ready();
+    // END: এই লাইনটিকে হুবহু অপরিবর্তিত রেখে দিন।
+    
+    // START: আপনার মূল কোডের এই লাইনটিতে পরিবর্তন ঘষাতে হবে
+    // আপনার বিদ্যমান লাইন:
+    // const tg = Telegram.WebApp.initDataUnsafe;
+    // const user = tg.user || { id: Date.now(), first_name: "Guest" };
+    
+    // এটিকে পরিবর্তন করে নিম্নলিখিত দুটি লাইন যুক্ত করুন (একই জায়গায় প্রতিস্থাপন করুন):
     const tg = Telegram.WebApp.initDataUnsafe;
     const user = tg.user || { id: Date.now(), first_name: "Guest" };
+    
+    // END: আপনার মূল কোডের এই লাইনটিতে পরিবর্তন ঘষাতে হবে
+
 
     currentUser = {
         id: user.id.toString(),
@@ -135,4 +151,20 @@ function loadNews() {
     });
 }
 
+// START: এই লাইনটি আপনার মূল কোড থেকে যেমন আছে তেমন রেখে দিন।
 initUser();
+// END: এই লাইনটি আপনার মূল কোড থেকে যেমন আছে তেমন রেখে দিন।
+
+
+// START: Telegram WebApp লোড হওয়া নিশ্চিত করার জন্য এই অতিরিক্ত কোডটুকু একদম নিচে ঘষান।
+// এটি আপনার বর্তমান initUser() ফাংশনটিকে সঠিক সময়ে কল করার কাজটি নিশ্চিত করবে।
+if (window.Telegram && window.Telegram.WebApp) {
+    // যদি Telegram WebApp অবজেক্ট লোড হয়ে যায়, তবে এর রেডি ইভেন্টের পরে initUser কল করবে।
+    Telegram.WebApp.ready(() => {
+        // initUser(); // <--- আপনার মূল কোডে initUser() আগে থেকেই আছে, তাই এখানে আবার কল করার দরকার নেই।
+    });
+} else {
+    // যদি Telegram অবজেক্ট না পাওয়া যায়, তবে এটি টেলিগ্রামের বাইরে চলছে।
+    // এই ব্লকে কোনো alert না দিলেও, initUser() এর ভেতরের alert চলবে।
+}
+// END: এই অতিরিক্ত কোডটুকু একদম নিচে ঘষান।

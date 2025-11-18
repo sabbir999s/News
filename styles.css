@@ -1,0 +1,336 @@
+
+/* styles.css */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background: linear-gradient(180deg, #f0f4f8 0%, #d9e2ee 100%); /* হালকা নীল ব্যাকগ্রাউন্ড */
+    min-height: 100vh;
+    padding-bottom: 60px; /* ফিক্সড নেভিগেশনের জন্য জায়গা */
+}
+
+.container {
+    max-width: 450px; /* মোবাইল স্ক্রিনের জন্য সর্বোচ্চ প্রস্থ */
+    margin: 0 auto;
+    padding: 20px 15px;
+}
+
+/* --- নেভিগেশন বার ডিজাইন --- */
+.nav-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    height: 60px;
+    background-color: white;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: #888;
+    font-size: 12px;
+    transition: color 0.3s;
+    padding: 5px;
+}
+
+.nav-item.active {
+    color: #6a5acd; /* অ্যাক্টিভ বাটনের রং (পার্পল) */
+}
+
+.nav-item i {
+    font-size: 20px;
+    margin-bottom: 3px;
+}
+/* Font Awesome বা অন্য আইকন লাইব্রেরি ব্যবহার করতে হবে */
+
+/* --- কার্ড এবং ইনপুট ডিজাইন --- */
+.card {
+    background-color: white;
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.input-field, .display-field {
+    background-color: #f7f7f7;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    color: #333;
+    font-size: 16px;
+}
+
+.input-field input {
+    flex-grow: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 16px;
+    color: #333;
+}
+
+.title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.balance-box {
+    text-align: center;
+    padding: 15px;
+    font-size: 24px;
+    font-weight: bold;
+    color: #6a5acd;
+}
+
+/* বাটন স্টাইল */
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn-primary {
+    background-color: #6a5acd;
+    color: white;
+}
+
+.btn-secondary {
+    background-color: #eee;
+    color: #333;
+}
+
+/* প্রোফাইল ছবি */
+.profile-img-container {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #1abc9c, #16a085); /* Telegram-like gradient */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 30px;
+    margin: 0 auto 15px;
+}
+
+/* আইকন হিসেবে টেলিগ্রামের একটি সাধারণ ইউজার আইকন ব্যবহার করা হয়েছে */
+.profile-img-container i {
+    font-size: 30px;
+}
+/* Font Awesome ব্যবহার করা হয়েছে */
+
+/* home.js এর জন্য নতুন CSS: styles.css এ যোগ করুন */
+
+.profile-header .card:first-child {
+    flex: 1; 
+    text-align: center;
+    padding: 10px; /* ছোট কার্ডের জন্য */
+}
+.profile-header .card .title-small {
+    font-size: 14px;
+    color: #6a5acd;
+    margin-bottom: 5px;
+}
+.profile-header .card p {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+}
+.profile-header .card p.value-country {
+    font-size: 16px;
+    font-weight: normal;
+    color: #555;
+}
+
+/* সর্বশেষ নিউজের ডিজাইন */
+#latest-news-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+}
+
+.news-item {
+    display: flex;
+    padding: 0;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.news-img {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-right: 1px solid #eee;
+}
+
+.news-image-placeholder-small {
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(135deg, #6a5acd, #9370db);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 10px;
+    padding: 10px;
+    text-align: center;
+}
+.news-image-placeholder-small i {
+    font-size: 20px;
+    margin-bottom: 5px;
+}
+
+.news-content {
+    flex-grow: 1;
+    padding: 15px;
+}
+
+.news-content .news-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.news-content .news-description {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.4;
+    max-height: 2.8em; /* 2 লাইনের জন্য */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* styles.css */
+
+/* General Reset and Base Styles */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f4f8; /* Light gray-blue background */
+    margin: 0;
+    padding: 0;
+    padding-bottom: 70px; /* নেভিগেশন বারের জন্য জায়গা রাখা */
+    color: #333;
+    -webkit-tap-highlight-color: transparent; /* মোবাইলে ক্লিক হাইলাইট রিমুভ করা */
+}
+
+.container {
+    padding: 15px;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Typography and Headings */
+.title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+/* Card General Style */
+.card {
+    background-color: white;
+    padding: 15px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Input and Form Styles */
+.input-field input,
+.input-field-with-prefix input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-sizing: border-box;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.input-field input:focus {
+    border-color: #6a5acd;
+}
+
+/* Primary Button Style */
+.btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.btn-primary {
+    background-color: #6a5acd; /* মূল রঙ: বেগুনি */
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #554499;
+}
+
+/* Navigation Bar (Footer) */
+.nav-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background-color: white;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    height: 60px;
+    z-index: 1000;
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: #888;
+    font-size: 12px;
+    padding: 5px;
+    flex-grow: 1;
+}
+
+.nav-item i {
+    font-size: 20px;
+    margin-bottom: 2px;
+}
+
+.nav-item.active {
+    color: #6a5acd; /* সক্রিয় আইটেমের রঙ */
+}
+
+.nav-item.active span {
+    font-weight: bold;
+}

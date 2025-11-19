@@ -1,6 +1,6 @@
 // আপনার AdsGram ব্লক আইডি এখানে বসান
-const VIDEO_BLOCK_ID = "your-block-id-video"; 
-const INTERSTITIAL_BLOCK_ID = "your-block-id-interstitial";
+const VIDEO_BLOCK_ID = "17904"; 
+const INTERSTITIAL_BLOCK_ID = "int-17904";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBQf-ILFW6jDV-c_O2LG6elA5oAB84p2XQ",

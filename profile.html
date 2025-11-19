@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Headline News</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script> 
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="card profile-header">
+            <div class="profile-img-container" style="width: 80px; height: 80px; margin: 0 auto 10px;">
+                <img id="profile-photo" src="" alt="Profile">
+            </div>
+            
+            <h3 id="profile-name" class="profile-name">Loading...</h3>
+            <p id="profile-username" class="profile-username">@username</p>
+        </div>
+
+        <div class="details-section card">
+            <div class="title">Account Details</div>
+            
+            <div class="detail-item">
+                <span class="detail-label">User ID</span>
+                <span id="user-id" class="detail-value" style="font-size: 12px;">N/A</span>
+            </div>
+
+            <div class="detail-item">
+                <span class="detail-label">Current Balance</span>
+                <span class="detail-value">
+                    <span id="current-balance-symbol">৳</span>
+                    <span id="current-balance-value">0.00</span>
+                    <span id="current-balance-code" class="currency-code-small">(BDT)</span>
+                </span>
+            </div>
+
+            <div class="detail-item">
+                <span class="detail-label">Total Points</span>
+                <span class="detail-value">
+                    <span id="total-points-count">0</span> Points 
+                    <span style="font-size: 14px; color: #555;">(
+                        <span id="total-points-value-symbol">৳</span>
+                        <span id="total-points-value">0.00</span>
+                    )</span>
+                </span>
+            </div>
+
+            <div class="detail-item">
+                <span class="detail-label">Total Referrals</span>
+                <span id="total-referrals" class="detail-value">0 Users</span>
+            </div>
+
+            <div class="detail-item">
+                <span class="detail-label">Country</span>
+                <span id="user-country" class="detail-value">Bangladesh</span>
+            </div>
+            
+        </div>
+
+        <div class="card">
+            <div class="title">Currency Setting</div>
+            <div class="input-field">
+                <label for="currency-selector-profile">Select Preferred Currency</label>
+                <select id="currency-selector-profile">
+                    <option value="BDT">BDT - Bangladeshi Taka (৳)</option>
+                    <option value="USD">USD - US Dollar ($)</option>
+                    <option value="INR">INR - Indian Rupee (₹)</option>
+                    <option value="PKR">PKR - Pakistani Rupee (Rs)</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="title">Convert Points to Balance</div>
+            <p style="font-size: 12px; color: #e74c3c; margin-bottom: 10px;">Minimum 1000 Points required to convert.</p>
+            <div class="input-field">
+                <label for="points-to-convert">Points to Convert (Max: <span id="max-points">0</span>)</label>
+                <input type="number" id="points-to-convert" min="1000" placeholder="Enter points (e.g., 1000)">
+            </div>
+            <p id="conversion-result" style="font-size: 14px; color: #6c5ce7; margin: 10px 0; text-align: center;">Conversion result will appear here.</p>
+            <button id="convert-btn" class="btn btn-primary" disabled>Convert Points</button>
+        </div>
+
+        <div class="card">
+            <div class="title">Other Options</div>
+            <button class="btn btn-secondary" onclick="openSupport()">Support & Contact</button>
+            <button class="btn btn-danger" onclick="logout()">Logout</button>
+        </div>
+
+    </div>
+
+    <div class="nav-bar">
+        <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>Home</span></a>
+        <a href="news.html" class="nav-item"><i class="fas fa-newspaper"></i><span>News</span></a>
+        <a href="wallet.html" class="nav-item"><i class="fas fa-wallet"></i><span>Wallet</span></a>
+        <a href="profile.html" class="nav-item active"><i class="fas fa-user-circle"></i><span>Profile</span></a>
+    </div>
+
+    <div class="popup-overlay" id="logout-popup" style="display: none;">
+        <div class="popup" style="border: 4px solid #e74c3c;">
+            <i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i><br>
+            <p style="font-weight: bold; margin-bottom: 15px;">Are you sure you want to log out?</p>
+            <button class="btn btn-danger" onclick="confirmLogout()">Yes, Logout</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('logout-popup').style.display='none'">Cancel</button>
+        </div>
+    </div>
+
+    <script src="profile.js"></script>
+</body>
+</html>

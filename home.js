@@ -10,7 +10,8 @@ Const firebaseConfig = {
   };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+// ✅ Firebase.database() এর বদলে Firestore ব্যবহার করা হলো
+const db = firebase.firestore();
 
 let currentUser = null;
 let deviceId = "";
@@ -22,7 +23,7 @@ const CURRENCY_RATES = {
     'PKR': { symbol: 'Rs', rate: 279.00 }
 };
 const POINT_VALUE_USD = 0.01; 
-
+// ... (Helper functions like getLiveExchangeRates, convertUSDToCurrency, convertPointsToUSD, getDeviceId, showPopup remain the same) ...
 async function getLiveExchangeRates() {
     return CURRENCY_RATES;
 }
@@ -59,6 +60,7 @@ function showPopup(msg) {
     setTimeout(() => document.getElementById("popup").style.display = "none", 3000);
 }
 
+
 function initUser() {
     if (!window.Telegram?.WebApp) return alert("টেলিগ্রাম থেকে খুলুন!");
     
@@ -80,28 +82,36 @@ function initUser() {
         currency: 'BDT' 
     };
 
-    if (currentUser.photo) document.getElementById("user-photo").src = currentUser.photo;
+    // ✅ ফিক্স: যদি Telegram photo না পাওয়া যায়, তবে একটি ডিফল্ট ছবি সেট করা হলো
+    if (!currentUser.photo) {
+        document.getElementById("user-photo").src = "https://via.placeholder.com/80?text=TG";
+    } else {
+        if (currentUser.photo) document.getElementById("user-photo").src = currentUser.photo;
+    }
 
     const urlParams = new URLSearchParams(window.location.search);
     const refId = urlParams.get("start");
 
-    db.ref("users/" + currentUser.id).on("value", snap => {
-        const exists = snap.val();
+    // ✅ Firestore লিসেনার: .onSnapshot ব্যবহার করা হয়েছে রিয়েল-টাইম আপডেটের জন্য
+    db.collection("users").doc(currentUser.id).onSnapshot(doc => {
+        const exists = doc.exists;
+        const data = doc.data();
+
         if (exists) {
             const updatedUser = {
-                ...exists,
+                ...data, // Firestore ডেটা আগে লোড
                 name: currentUser.name,
                 username: currentUser.username,
                 photo: currentUser.photo,
                 country: currentUser.country,
-                balance: exists.balance || 0,
-                points: exists.points || 0,
-                // ✅ সেভ করা কারেন্সি লোড হচ্ছে
-                currency: exists.currency || 'BDT' 
+                balance: data.balance || 0,
+                points: data.points || 0,
+                currency: data.currency || 'BDT' 
             };
             currentUser = updatedUser;
             
-            db.ref("users/" + currentUser.id).update({
+            // রিয়েল-টাইম আপডেট Firestore এ .set() বা .update() দিয়ে
+            db.collection("users").doc(currentUser.id).update({
                 name: currentUser.name,
                 username: currentUser.username,
                 photo: currentUser.photo,
@@ -110,37 +120,66 @@ function initUser() {
             
             updateUI(); 
             loadNews();
-        } else if (refId && refId !== currentUser.id) {
-            giveReferralBonus(refId);
         } else {
-            db.ref("users/" + currentUser.id).set(currentUser); 
-            showPopup("স্বাগতম! রেফারেল ছাড়া জয়েন করেছেন।");
-            updateUI();
-            loadNews();
+            // ✅ Firestore: নতুন ইউজার সেভ করার লজিক
+            
+            let initialUser = { ...currentUser };
+            let isNewUser = true;
+            
+            // ✅ ফিক্স: ডিভাইস আইডি এবং টাইমস্ট্যাম্প নিশ্চিত করা হলো
+            initialUser.deviceId = deviceId; 
+            initialUser.createdAt = firebase.firestore.FieldValue.serverTimestamp(); 
+            // ফিক্স শেষ: এই কোডগুলি ইউজার ক্রেড হওয়া নিশ্চিত করবে
+
+            if (refId && refId !== currentUser.id) {
+                const bonus = 0.05; 
+                initialUser.balance = bonus; 
+                giveReferralBonus(refId); // রেফারেল বোনাস লজিক
+                showPopup("স্বাগতম ও রেফারেল বোনাস! আপনি $0.05 USD পেয়েছেন!");
+            } else if (isNewUser) {
+                showPopup("স্বাগতম! রেফারেল ছাড়া জয়েন করেছেন।");
+            }
+
+            db.collection("users").doc(currentUser.id).set(initialUser)
+              .then(() => {
+                currentUser = initialUser;
+                updateUI();
+                loadNews();
+              })
+              .catch(error => {
+                console.error("Firestore Set Error: ", error);
+                alert("Firestore Error: ডেটা সেভ হয়নি।");
+              });
         }
+    }, error => {
+        console.error("Firestore Snapshot Error: ", error);
     });
 }
 
 function giveReferralBonus(refId) {
     const bonus = 0.05; 
-    db.ref("users/" + refId).once("value").then(snap => {
-        const referrer = snap.val();
-        if (referrer && referrer.deviceId !== deviceId) {
-            db.ref("users/" + refId + "/balance").transaction(v => (v || 0) + bonus);
-            db.ref("users/" + refId + "/referrals").transaction(v => (v || 0) + 1);
-            currentUser.balance = bonus;
-            db.ref("users/" + currentUser.id).set(currentUser);
-            showPopup("রেফারেল বোনাস! আপনি পেয়েছেন $0.05 USD!");
-        } else {
-            db.ref("users/" + currentUser.id).set(currentUser);
-            showPopup("একই ফোন থেকে রেফারেল গ্রহণযোগ্য নয়।");
-        }
-        updateUI();
-        loadNews();
+    const referrerRef = db.collection("users").doc(refId);
+
+    // Firestore Transaction ব্যবহার করে ব্যালেন্স ও রেফারেল সংখ্যা আপডেট
+    db.runTransaction(transaction => {
+        return transaction.get(referrerRef).then(doc => {
+            if (doc.exists) {
+                const referrerData = doc.data();
+                if (referrerData.deviceId !== deviceId) {
+                    const newBalance = (referrerData.balance || 0) + bonus;
+                    const newReferrals = (referrerData.referrals || 0) + 1;
+                    transaction.update(referrerRef, { balance: newBalance, referrals: newReferrals });
+                }
+            }
+        });
+    }).then(() => {
+        console.log("Referral Transaction successful");
+    }).catch(error => {
+        console.error("Referral Transaction failed: ", error);
     });
 }
 
-// ✅ চূড়ান্ত ফিক্স: হোম পেজে প্রতীক ও মান আলাদাভাবে আপডেট করা
+// ... (updateUI function remains the same, it uses currentUser data) ...
 async function updateUI() {
     document.getElementById("user-name-display").innerText = currentUser.name;
     document.getElementById("user-username-display").innerText = "@" + currentUser.username;
@@ -171,19 +210,25 @@ async function updateUI() {
         navigator.clipboard.writeText(link);
         showPopup("লিংক কপি হয়েছে!");
     };
+    
+    // ✅ ফিক্স: রেফারেল লিংক শেয়ার করার জন্য আরো নির্ভরযোগ্য কোড যোগ
     document.getElementById("share-btn").onclick = () => {
-        Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}`);
+        const shareText = `💰 Join me on Headline News Mini App and earn! Use my referral link: ${link}`; // শেয়ার করার জন্য কাস্টম টেক্সট
+        Telegram.WebApp.openTelegramLink(`https://t.me/share/url?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(link)}`);
     };
 }
 
 function loadNews() {
-    db.ref("news").orderByChild("timestamp").limitToLast(5).on("value", snap => {
+    // ✅ Firestore: news collection থেকে ডেটা লোড
+    db.collection("news").orderBy("timestamp", "desc").limit(5).onSnapshot(snap => {
         const container = document.getElementById("latest-news-list");
         container.innerHTML = "";
-        Object.values(snap.val() || {}).reverse().forEach(n => {
+        
+        snap.docs.forEach(doc => {
+            const n = doc.data();
             const card = document.createElement("div");
             card.className = "news-card";
-            card.onclick = () => location.href = `news.html?id=${n.id}`;
+            card.onclick = () => location.href = `news.html?id=${doc.id}`; // doc.id ব্যবহার করা হলো
             card.innerHTML = `
                 <img src="${n.imageUrl}" alt="News Image">
                 <div class="news-card-content">
@@ -196,9 +241,7 @@ function loadNews() {
     });
 }
 
-initUser();
 
-// ... (DOM Content Loaded handler) ...
 document.addEventListener('DOMContentLoaded', () => {
     if (window.Telegram && window.Telegram.WebApp) {
         Telegram.WebApp.ready(initUser);

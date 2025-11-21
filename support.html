@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Support - Red Rose 🌹</title>
+  <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header class="header">
+    <div class="profile">
+      <img id="user-avatar" src="" alt="Avatar" class="avatar" />
+      <div class="user-info">
+        <div class="name-row">
+          <p id="user-name" class="username">লোড হচ্ছে...</p>
+          <div class="verified-badge">Verified</div>
+        </div>
+        <p class="balance">Balance: <span id="balance">0</span>৳</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <h1>Supprot</h1>
+
+    <div class="support-card">
+      <h3>সমস্যা হলে সাথে যোগাযোগ করুন</h3>
+      <p>আমরা ২৪/৭ সাপোর্ট দিয়ে থাকি</p>
+
+      <div class="btn-group">
+        <button onclick="window.open('https://t.me/Lalgulap999s')" class="btn-primary">Telegram</button>
+        <button onclick="window.open('https://wa.me/+8801302390837')" class="btn-success">WhatsApp</button>
+      </div>
+
+      <div class="faq-section">
+        <h4>প্রশ্নোত্তর (FAQ)</h4>
+        <div class="faq-item">
+          <p class="question">কীভাবে রেফার করব?</p>
+          <p class="answer">হোমে গিয়ে "Copy Link" ক্লিক করুন → শেয়ার করুন।</p>
+        </div>
+        <div class="faq-item">
+          <p class="question">উইথড্র কতদিন লাগে?</p>
+          <p class="answer">২৪ ঘণ্টার মধ্যে বিকাশ/নগদে পেমেন্ট।</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+ <nav class="bottom-nav">
+  <button class="nav-item" onclick="goToHome()">Home</button>
+  <button class="nav-item active">Support</button>
+  <button class="nav-item" onclick="goToNews()">News</button>
+  <button class="nav-item"onclick="goToWithdraw()">Withdraw</button>
+  <button class="nav-item"onclick="goToProfile()">Profile</button>
+   
+</nav>
+
+    <script>
+    // support.html-এর জন্য সম্পূর্ণ নতুন JavaScript
+const firebaseConfig = {
+    apiKey: "AIzaSyBQf-ILFW6jDV-c_O2LG6elA5oAB84p2XQ",
+    authDomain: "top-news-91db8.firebaseapp.com",
+    databaseURL: "https://top-news-91db8-default-rtdb.firebaseio.com",
+    projectId: "top-news-91db8",
+    storageBucket: "top-news-91db8.firebasestorage.app",
+    messagingSenderId: "348369077928",
+    appId: "1:348369077928:web:7629c503c30cbf7450649d",
+    measurementId: "G-7GMX8N2NSC"
+  };
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
+
+const user = tg.initDataUnsafe.user;
+const userId = user?.id.toString() || 'unknown';
+const userRef = db.collection('users').doc(userId);
+
+// গ্লোবাল নেভিগেশন ফাংশন
+function goToHome() { window.location.href = 'index.html'; }
+function goToSupport() { window.location.href = 'support.html'; }
+function goToNews() { window.location.href = 'News.html'; }
+function goToWithdraw() { window.location.href = 'withdraw.html'; }
+function goToProfile() { window.location.href = 'profile.html'; }
+
+// ===========================================
+// 🔥 নতুন কোড শুরু: ব্যান/সাসপেনশন এবং পপআপ ফিক্স
+// ===========================================
+
+// পপ-আপের HTML স্ট্রাকচার (আপডেট করা: দুটি বাটন সাপোর্ট)
+function getPopupHTML(title, message, primaryButtonText = null, primaryButtonAction = null, secondaryButtonText = null, secondaryButtonAction = null) {
+  return `
+    <div id="dynamic-popup-overlay" class="popup-overlay" style="
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+        background: rgba(0, 0, 0, 0.9); z-index: 9999; display: flex; 
+        justify-content: center; align-items: center; backdrop-filter: blur(8px);">
+      <div class="popup-card" style="
+        background: var(--card-bg); padding: 30px; border-radius: 20px; 
+        width: 90%; max-width: 350px; text-align: center; border: 2px solid var(--neon);
+        box-shadow: 0 0 40px rgba(0, 170, 255, 0.7);">
+        <h2 style="color: var(--success); margin-bottom: 15px; font-size: 20px;">${title}</h2>
+        <p style="color: var(--text); font-size: 16px; line-height: 1.6;">${message}</p>
+        ${primaryButtonText ? `<button id="popup-primary-btn" class="btn-primary" style="margin-top: 25px; width: 100%; background: #ff4444;">${primaryButtonText}</button>` : ''}
+        ${secondaryButtonText ? `<button id="popup-secondary-btn" class="btn-secondary" style="margin-top: 10px; width: 100%; background: #555; color: #fff;">${secondaryButtonText}</button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+// সাসপেনশন শেষ হলে বা ম্যানুয়াল আনব্যান হলে দেখানোর জন্য
+function showCongratulationsPopup(message) {
+    const popupHTML = getPopupHTML(
+        '🎉 অভিনন্দন!',
+        message,
+        'অ্যাপটি রিলোড করুন'
+    );
+    document.body.insertAdjacentHTML('beforeend', popupHTML);
+    
+    // Primary button logic
+    const primaryBtn = document.getElementById('popup-primary-btn');
+    if (primaryBtn) {
+        primaryBtn.style.background = '#00cc66'; // Green for success
+        primaryBtn.onclick = () => {
+            document.getElementById('dynamic-popup-overlay').remove();
+            window.location.reload(); 
+        };
+    }
+
+    tg.BackButton.hide();
+}
+
+// সাসপেনশনের জন্য নতুন টাইমার ফাংশন
+function startSuspensionTimer(bannedUntilDate, popupElement) {
+    const timerElement = document.createElement('p');
+    timerElement.id = 'suspension-timer';
+    timerElement.style.color = 'var(--text)';
+    timerElement.style.marginTop = '10px';
+    
+    // টাইমার পপ-আপ কার্ডের মধ্যে ঢুকানো
+    const popupCard = popupElement.querySelector('.popup-card');
+    const messageElement = popupCard.querySelector('p'); 
+    messageElement.insertAdjacentElement('afterend', timerElement);
+
+    const updateTimer = async () => {
+        const now = new Date();
+        const diff = bannedUntilDate.getTime() - now.getTime();
+
+        if (diff <= 1000) {
+            clearInterval(window.suspensionInterval);
+            timerElement.textContent = 'সাসপেনশন শেষ! আনব্যান করা হচ্ছে...';
+            
+            // Firebase-এ স্ট্যাটাস আপডেট
+            await userRef.update({
+                isBanned: false,
+                bannedUntil: firebase.firestore.FieldValue.delete()
+            });
+
+            // পুরোনো পপআপ বন্ধ করুন
+            if (document.getElementById('dynamic-popup-overlay')) {
+                document.getElementById('dynamic-popup-overlay').remove();
+            }
+            // কংগ্রাচুলেশন পপআপ দেখান
+            showCongratulationsPopup('আপনার সাসপেনশন শেষ হয়েছে। আপনি এখন অ্যাপটি ব্যবহার করতে পারবেন!');
+            
+            return;
+        }
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        timerElement.innerHTML = `সাসপেনশন শেষ হবে: **${days} দিন ${hours} ঘণ্টা ${minutes} মিনিট ${seconds} সেকেন্ড**`;
+    };
+
+    updateTimer();
+    window.suspensionInterval = setInterval(updateTimer, 1000);
+}
+
+// ব্যান পপ-আপ ফাংশনটিকে আপডেট করা 
+function showBanPopup(isBanned, bannedUntil) {
+    let message = '';
+    let title = '⛔️ একাউন্ট ব্যানড!';
+    let showCloseAppBtn = true; 
+
+    // ব্যান স্ট্যাটাস ট্র্যাকিং
+    if (isBanned || bannedUntil) {
+        localStorage.setItem('wasBanned', 'true');
+    }
+
+    if (isBanned) {
+        message = 'আপনার একাউন্ট স্থায়ীভাবে ব্যান করা হয়েছে। অনুগ্রহ করে সাপোর্টে যোগাযোগ করুন।';
+    } else if (bannedUntil) {
+        title = '⏸ একাউন্ট সাসপেন্ডড!';
+        message = `আপনার একাউন্টটি সাময়িকভাবে সাসপেন্ড করা হয়েছে।`; 
+        showCloseAppBtn = false; 
+    } else {
+        return;
+    }
+    
+    // নতুন getPopupHTML ব্যবহার করে পপআপ তৈরি
+    const popupHTML = getPopupHTML(title, message, showCloseAppBtn ? 'Close App' : null);
+    document.body.insertAdjacentHTML('beforeend', popupHTML);
+
+    // সাসপেন্ডের জন্য টাইমার শুরু করা
+    if (!isBanned && bannedUntil) {
+        const popupOverlay = document.getElementById('dynamic-popup-overlay');
+        startSuspensionTimer(bannedUntil, popupOverlay);
+    } else if (showCloseAppBtn) {
+        // পার্মানেন্ট ব্যানের জন্য
+        const primaryBtn = document.getElementById('popup-primary-btn');
+        if (primaryBtn) {
+            primaryBtn.onclick = () => tg.close();
+        }
+    }
+    
+    // মেন ব্যালেন্স ফ্রিজ দেখানো
+    document.getElementById('balance').textContent = 'FREEZED'; 
+    
+    // ব্যাক বাটন ও অন্যান্য ফাংশন বন্ধ
+    tg.BackButton.hide();
+}
+// ===========================================
+// 🔥 নতুন কোড শেষ: ব্যান/সাসপেনশন এবং পপআপ ফিক্স
+// ===========================================
+
+// নাম + ছবি
+document.getElementById('user-name').textContent = user?.first_name || 'অজানা';
+const avatar = document.getElementById('user-avatar');
+if (user?.photo_url) {
+  avatar.src = user.photo_url + '?size=big';
+} else {
+  const initial = (user?.first_name?.[0] || 'U').toUpperCase();
+  avatar.src = `https://ui-avatars.com/api/?name=${initial}&background=00aaff&color=fff&size=128&bold=true`;
+}
+
+
+// রিয়েলটাইম ব্যালেন্স ও ব্যান চেক
+userRef.onSnapshot(doc => {
+  if (doc.exists) {
+    const data = doc.data();
+    document.getElementById('balance').textContent = data.balance || 0;
+    
+    // ব্যান/সাসপেন্ড চেক
+    const isBanned = data.isBanned || false;
+    const bannedUntil = data.bannedUntil?.toDate();
+    const isSuspended = bannedUntil && bannedUntil > new Date();
+    
+    if (isBanned || isSuspended) {
+      showBanPopup(isBanned, bannedUntil);
+      return;
+    }
+    
+    // 🔥 নতুন কোড শুরু: ব্যান/সাসপেন্ড থেকে আনব্যান হলে কংগ্রাচুলেশন পপআপ দেখান
+    const wasBanned = localStorage.getItem('wasBanned');
+    if (!isBanned && !isSuspended && wasBanned === 'true') {
+        localStorage.removeItem('wasBanned'); // ফ্ল্যাগ সরান
+        if (window.suspensionInterval) {
+            clearInterval(window.suspensionInterval);
+        }
+        showCongratulationsPopup('আপনার একাউন্ট সফলভাবে আনব্যান করা হয়েছে।');
+    }
+    // 🔥 নতুন কোড শেষ
+  }
+});
+    </script>
+</body>
+</html>

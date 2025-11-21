@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News - Earn</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> 
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script> 
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+
+    <style>
+        .news-earn-card { background:white; border-radius:15px; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.05); overflow:hidden; }
+        .news-image { width:100%; height:140px; object-fit:cover; }
+        .news-content { padding:15px; }
+        .news-title { font-size:18px; font-weight:bold; margin-bottom:8px; }
+        .news-description { font-size:14px; color:#555; margin-bottom:12px; }
+        .task-footer { display:flex; justify-content:space-between; align-items:center; padding-top:12px; border-top:1px solid #eee; }
+        .btn-earn { background:#6a5acd; color:white; padding:10px 18px; border-radius:10px; font-weight:bold; }
+        .earn-info strong { color:#6a5acd; font-size:15px; }
+
+        /* পপআপ */
+        .popup-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; display:none; justify-content:center; align-items:center; }
+        .popup { background:white; padding:30px; border-radius:20px; text-align:center; max-width:90%; border:5px solid #27ae60; }
+        .popup i { font-size:60px; color:#27ae60; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="title" style="margin-bottom:20px;">News & Earn</h2>
+        <div id="news-task-list"></div>
+    </div>
+
+    <!-- Task Modal (In-App Browser + Timer) -->
+    <div id="task-modal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:white; z-index:2000; display:none; padding:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px;">
+            <button onclick="closeTask()" style="background:none; border:none; font-size:24px; color:#6a5acd;">Close</button>
+            <h4 id="timer-display" style="margin:0; color:#6a5acd;">Time: 00:00</h4>
+            <button id="complete-btn" disabled style="background:#27ae60; color:white; padding:8px 15px; border-radius:8px;">Complete</button>
+        </div>
+        <iframe id="news-iframe" style="width:100%; height:calc(100% - 60px); border:none; margin-top:10px;" allow="fullscreen; geolocation; camera; microphone"></iframe>
+    </div>
+
+    <!-- Success Popup -->
+    <div class="popup-overlay" id="success-popup">
+        <div class="popup">
+            <i class="fas fa-check-circle"></i><br><br>
+            <h3>অভিনন্দন!</h3>
+            <p id="earn-message">আপনি ১০ টাকা উপার্জন করেছেন!</p>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+  <button class="nav-item" onclick="goToHome()">Home</button>
+  <button class="nav-item" onclick="goToSupport()">Support</button>
+  <button class="nav-item active">News</button>
+  <button class="nav-item"onclick="goToWithdraw()">Withdraw</button>
+  <button class="nav-item"onclick="goToProfile()">Profile</button>
+  
+</nav>
+
+    <script>
+// news.html এর ফিক্সড স্ক্রিপ্ট
+
+// কনফিগারেশন
+const VIDEO_BLOCK_ID = "17904"; 
+const INTERSTITIAL_BLOCK_ID = "int-17904";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBQf-ILFW6jDV-c_O2LG6elA5oAB84p2XQ",
+    authDomain: "top-news-91db8.firebaseapp.com",
+    databaseURL: "https://top-news-91db8-default-rtdb.firebaseio.com",
+    projectId: "top-news-91db8",
+    storageBucket: "top-news-91db8.firebasestorage.app",
+    messagingSenderId: "348369077928",
+    appId: "1:348369077928:web:7629c503c30cbf7450649d",
+    measurementId: "G-7GMX8N2NSC"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore(); 
+
+// Adsgram Init
+let VideoAdController = window.Adsgram?.init({ blockId: VIDEO_BLOCK_ID });
+let InterstitialAdController = window.Adsgram?.init({ blockId: INTERSTITIAL_BLOCK_ID });
+
+// ইউজার আইডি সেটআপ
+let currentUser = localStorage.getItem('newsApp_guestId'); 
+if (window.Telegram?.WebApp) {
+    Telegram.WebApp.ready();
+    currentUser = Telegram.WebApp.initDataUnsafe.user?.id?.toString() || 'guest_' + Date.now();
+} else if (!currentUser) {
+    currentUser = "guest_" + Date.now();
+    localStorage.setItem('newsApp_guestId', currentUser);
+}
+
+let currentTask = null;
+let timerInterval = null;
+let timer = 0;
+
+// নেভিগেশন
+function goToHome() { window.location.href = 'index.html'; }
+function goToSupport() { window.location.href = 'support.html'; }
+function goToNews() { window.location.href = 'news.html'; } // নামের বানান ঠিক করা হয়েছে
+function goToWithdraw() { window.location.href = 'withdraw.html'; }
+function goToProfile() { window.location.href = 'profile.html'; }
+
+// নিউজ লোড করা
+function loadNewsFirestore() {
+    const container = document.getElementById("news-task-list");
+    container.innerHTML = '<p style="text-align:center;">নিউজ লোড হচ্ছে...</p>';
+
+    db.collection("news").orderBy("timestamp", "desc").onSnapshot(snap => {
+        container.innerHTML = "";
+        if(snap.empty) {
+            container.innerHTML = '<p style="text-align:center;">কোনো নিউজ নেই।</p>';
+            return;
+        }
+
+        snap.forEach(doc => {
+            const n = doc.data();
+            const readKey = `read_${currentUser}_${doc.id}`; 
+            const already = localStorage.getItem(readKey);
+            
+            const buttonText = already ? "View News" : "Earn Now";
+            // ফিক্স: এখানে সরাসরি ফাংশন কল স্ট্রিং হিসেবে দেওয়া হলো
+            const onClickFn = `openNewsTask('${doc.id}')`; 
+            
+            container.innerHTML += `
+                <div class="news-earn-card">
+                    <img src="${n.imageUrl}" class="news-image" onerror="this.style.display='none'">
+                    <div class="news-content">
+                        <h3 class="news-title">${n.title}</h3>
+                        <p class="news-description">${n.description}</p>
+                        <div class="task-footer">
+                            <button class="btn-earn" onclick="${onClickFn}"> 
+                                ${buttonText}
+                            </button>
+                            ${!already ? `<div class="earn-info"><strong>৳${n.points}</strong> • ${Math.ceil(n.readTime/60)} min</div>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+        });
+    });
+}
+
+// টাস্ক ওপেন করা (বিজ্ঞাপন সহ)
+window.openNewsTask = async function(id) {
+    const doc = await db.collection("news").doc(id).get();
+    if (!doc.exists) return; 
+
+    currentTask = {...doc.data(), id: doc.id}; 
+    
+    // বিজ্ঞাপন দেখান
+    if (VideoAdController) {
+        VideoAdController.show().then(() => {
+            startReadingLogic(id);
+        }).catch((e) => {
+            console.log("Ad skipped/failed", e);
+            startReadingLogic(id); // ফেইল করলেও টাস্ক শুরু হবে
+        });
+    } else {
+        startReadingLogic(id);
+    }
+};
+
+// পড়ার লজিক এবং টাইমার
+function startReadingLogic(id) {
+    const readKey = `read_${currentUser}_${currentTask.id}`; 
+    const alreadyRead = localStorage.getItem(readKey);
+    const isEarning = !alreadyRead;
+
+    const timerDisplay = document.getElementById("timer-display");
+    const completeBtn = document.getElementById("complete-btn");
+    const modal = document.getElementById("task-modal");
+    const iframe = document.getElementById("news-iframe");
+
+    modal.style.display = "block";
+    iframe.src = currentTask.link;
+
+    if (isEarning) {
+        timer = currentTask.readTime;
+        timerDisplay.style.display = "block";
+        completeBtn.style.display = "block";
+        completeBtn.disabled = true;
+        timerDisplay.innerText = `Time: ${formatTime(timer)}`;
+        
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            timer--;
+            timerDisplay.innerText = `Time: ${formatTime(timer)}`;
+            if (timer <= 0) {
+                clearInterval(timerInterval);
+                timerDisplay.innerText = "Completed!";
+                completeBtn.disabled = false;
+                // কমপ্লিট বাটন লজিক
+                completeBtn.onclick = () => finishTask(true);
+            }
+        }, 1000);
+    } else {
+        // শুধু পড়ার জন্য
+        timerDisplay.style.display = "none";
+        completeBtn.style.display = "none";
+    }
+}
+
+// টাস্ক শেষ করা
+function finishTask(addMoney) {
+    const modal = document.getElementById("task-modal");
+    const iframe = document.getElementById("news-iframe");
+    
+    // ইন্টারস্টিশিয়াল অ্যাড (ক্লোজ করার সময়)
+    if (InterstitialAdController) {
+        InterstitialAdController.show().catch(e => console.log(e));
+    }
+
+    if (addMoney) {
+        // টাকা অ্যাড করা (লোকাল স্টোরেজ + UI)
+        localStorage.setItem(`read_${currentUser}_${currentTask.id}`, "true");
+        
+        // Firestore আপডেট (অপশনাল, যদি তুমি সার্ভারে পয়েন্ট রাখতে চাও)
+        // db.collection('users').doc(currentUser).update(...) 
+        
+        // সাকসেস মেসেজ
+        document.getElementById("earn-message").innerText = `অভিনন্দন! ৳${currentTask.points} যুক্ত হয়েছে!`;
+        document.getElementById("success-popup").style.display = "flex";
+        setTimeout(() => {
+            document.getElementById("success-popup").style.display = "none";
+            modal.style.display = "none";
+            iframe.src = "";
+            loadNewsFirestore(); // লিস্ট রিফ্রেশ
+        }, 2000);
+    } else {
+        modal.style.display = "none";
+        iframe.src = "";
+    }
+}
+
+// ক্লোজ বাটন (উপরে বামে)
+window.closeTask = function() {
+    clearInterval(timerInterval);
+    document.getElementById("task-modal").style.display = "none";
+    document.getElementById("news-iframe").src = "";
+}
+
+function formatTime(s) {
+    return `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
+}
+
+// শুরু করুন
+loadNewsFirestore();
+</script>
+
+</body>
+</html>

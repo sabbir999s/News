@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Headline News</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script> 
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script> 
+    
+</head>
+<body>
+    <div class="container">
+        <div class="card profile-header">
+            <div class="profile-img-container" style="width: 80px; height: 80px; margin: 0 auto 10px;">
+                <img id="profile-photo" src="" alt="Profile">
+            </div>
+            
+            <h3 id="profile-name" class="profile-name">Loading...</h3>
+            <p id="profile-username" class="profile-username">@username</p>
+        </div>
+
+        <div class="details-section card">
+            <div class="title">Account Details</div>
+            
+            <div class="detail-item">
+                <span class="detail-label">User ID</span>
+                <span id="user-id" class="detail-value" style="font-size: 12px;">N/A</span>
+            </div>
+
+            <div class="detail-item">
+                <span class="detail-label">Current Balance</span>
+                <span class="detail-value">
+                    <span id="current-balance-symbol">৳</span>
+                    <span id="current-balance-value">0.00</span>
+                    <span id="current-balance-code" class="currency-code-small">(BDT)</span>
+                </span>
+            </div>
+
+            <div class="detail-item">
+                <span class="detail-label">Total Points</span>
+                <span class="detail-value">
+                    <span id="total-points-count">0</span> Points 
+                    <span style="font-size: 14px; color: #555;">(
+                        <span id="total-points-value-symbol">৳</span>
+                        <span id="total-points-value">0.00</span>
+                    )</span>
+                </span>
+            </div>
+
+            <div class="detail-item">
+                <span class="detail-label">Total Referrals</span>
+                <span id="total-referrals" class="detail-value">0 Users</span>
+            </div>
+
+            <div class="detail-item">
+                <span class="detail-label">Country</span>
+                <span id="user-country" class="detail-value">Bangladesh</span>
+            </div>
+            
+        </div>
+
+        <div class="card">
+            <div class="title">Currency Setting</div>
+            <div class="input-field">
+                <label for="currency-selector-profile">Select Preferred Currency</label>
+                <select id="currency-selector-profile">
+                    <option value="BDT">BDT - Bangladeshi Taka (৳)</option>
+                    <option value="USD">USD - US Dollar ($)</option>
+                    <option value="INR">INR - Indian Rupee (₹)</option>
+                    <option value="PKR">PKR - Pakistani Rupee (Rs)</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="title">Convert Points to Balance</div>
+            <p style="font-size: 12px; color: #e74c3c; margin-bottom: 10px;">Minimum 1000 Points required to convert.</p>
+            <div class="input-field">
+                <label for="points-to-convert">Points to Convert (Max: <span id="max-points">0</span>)</label>
+                <input type="number" id="points-to-convert" min="1000" placeholder="Enter points (e.g., 1000)">
+            </div>
+            <p id="conversion-result" style="font-size: 14px; color: #6c5ce7; margin: 10px 0; text-align: center;">Conversion result will appear here.</p>
+            <button id="convert-btn" class="btn btn-primary" disabled>Convert Points</button>
+        </div>
+
+        <div class="card">
+            <div class="title">Other Options</div>
+            <button class="btn btn-secondary" onclick="openSupport()">Support & Contact</button>
+            <button class="btn btn-danger" onclick="logout()">Logout</button>
+        </div>
+
+    </div>
+
+   <nav class="bottom-nav">
+  <button class="nav-item" onclick="goToHome()">Home</button>
+  <button class="nav-item" onclick="goToSupport()">Support</button>
+  <button class="nav-item " onclick="goToNews()">News</button>
+  <button class="nav-item"onclick="goToWithdraw()">Withdraw</button>
+  <button class="nav-item active">Profile</button>
+  
+</nav>
+    <div class="popup-overlay" id="logout-popup" style="display: none;">
+        <div class="popup" style="border: 4px solid #e74c3c;">
+            <i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i><br>
+            <p style="font-weight: bold; margin-bottom: 15px;">Are you sure you want to log out?</p>
+            <button class="btn btn-danger" onclick="confirmLogout()">Yes, Logout</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('logout-popup').style.display='none'">Cancel</button>
+        </div>
+    </div>
+
+   <script>
+    // ১. ফায়ারবেস কনফিগারেশন
+    const firebaseConfig = {
+        apiKey: "AIzaSyBQf-ILFW6jDV-c_O2LG6elA5oAB84p2XQ",
+        authDomain: "top-news-91db8.firebaseapp.com",
+        databaseURL: "https://top-news-91db8-default-rtdb.firebaseio.com",
+        projectId: "top-news-91db8",
+        storageBucket: "top-news-91db8.firebasestorage.app",
+        messagingSenderId: "348369077928",
+        appId: "1:348369077928:web:7629c503c30cbf7450649d",
+        measurementId: "G-7GMX8N2NSC"
+    };
+
+    // ফায়ারবেস ইনিশিলাইজ
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+
+    // ২. টেলিগ্রাম ওয়েব অ্যাপ সেটআপ
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    // ইউজার আইডি এবং ডাটা রেফারেন্স
+    const user = tg.initDataUnsafe.user;
+    const userId = user?.id.toString() || 'unknown'; // টেস্টিংয়ের জন্য unknown
+    const userRef = db.collection('users').doc(userId);
+
+    // ৩. কারেন্সি রেট এবং কনস্ট্যান্ট
+    const CURRENCY_RATES = {
+        'BDT': { symbol: '৳', rate: 1.0 },       // বেস কারেন্সি (1 BDT = 1 BDT)
+        'USD': { symbol: '$', rate: 0.0091 },    // 1 BDT = 0.0091 USD (আনুমানিক)
+        'INR': { symbol: '₹', rate: 0.75 },      // 1 BDT = 0.75 INR
+        'PKR': { symbol: 'Rs', rate: 2.50 }      // 1 BDT = 2.50 PKR
+    };
+    
+    // ১০০০ পয়েন্ট = ১০ টাকা (BDT) - এই লজিক ধরে কনভার্সন হবে
+    const POINT_TO_BDT_RATE = 10 / 1000; // প্রতি পয়েন্ট ০.০১ টাকা
+    const MIN_CONVERT_POINTS = 1000;
+
+    // ৪. মেইন প্রোফাইল লোডিং ফাংশন
+    function loadProfileData() {
+        // নাম এবং ছবি সেট করা (টেলিগ্রাম থেকে)
+        document.getElementById("profile-name").innerText = (user?.first_name || "Guest") + (user?.last_name ? " " + user.last_name : "");
+        document.getElementById("profile-username").innerText = user?.username ? "@" + user.username : "N/A";
+        document.getElementById("user-id").innerText = userId;
+        
+        if (user?.photo_url) {
+            document.getElementById("profile-photo").src = user.photo_url;
+        } else {
+            // ডিফল্ট ইমেজ
+             document.getElementById("profile-photo").src = "https://ui-avatars.com/api/?name=" + (user?.first_name || "U") + "&background=random";
+        }
+
+        // কারেন্সি সিলেক্টর লজিক
+        const currencySelector = document.getElementById("currency-selector-profile");
+        
+        // ৫. রিয়েলটাইম ডাটা লিসেনার
+        userRef.onSnapshot((doc) => {
+            if (doc.exists) {
+                const data = doc.data();
+                const savedCurrency = data.currency || 'BDT';
+                const balanceBDT = data.balance || 0; // ডাটাবেসে সব সময় BDT তে ব্যালেন্স থাকবে
+                const points = data.points || 0;
+                const referrals = data.referCount || 0; // বা referrals
+
+                // ড্রপডাউন ভ্যালু সেট
+                if (document.activeElement !== currencySelector) {
+                    currencySelector.value = savedCurrency;
+                }
+
+                // ব্যালেন্স এবং পয়েন্ট আপডেট করা
+                updateDisplay(balanceBDT, points, currencySelector.value, referrals, data.country);
+            } else {
+                // নতুন ইউজার হলে বা ডাটা না থাকলে
+                document.getElementById("current-balance-value").innerText = "0.00";
+                document.getElementById("total-points-count").innerText = "0";
+            }
+        });
+
+        // কারেন্সি চেঞ্জ করলে ডিসপ্লে আপডেট এবং ডাটাবেসে সেভ
+        currencySelector.onchange = function() {
+            const newCurrency = this.value;
+            // ডাটাবেসে কারেন্সি প্রেফারেন্স আপডেট
+            userRef.update({ currency: newCurrency });
+            // ডিসপ্লে আপডেট করার জন্য বর্তমান ব্যালেন্স দরকার, তাই স্ন্যাপশট অটোমেটিক কাজ করবে
+        };
+    }
+
+    // ৬. ডিসপ্লে আপডেট হেল্পার ফাংশন
+    function updateDisplay(balanceBDT, points, currencyCode, referrals, country) {
+        const rateData = CURRENCY_RATES[currencyCode] || CURRENCY_RATES['BDT'];
+        
+        // ব্যালেন্স কনভার্সন
+        const convertedBalance = (balanceBDT * rateData.rate).toFixed(2);
+        
+        // পয়েন্টের ভ্যালু (টাকায়) কনভার্সন
+        const pointsValueInBDT = points * POINT_TO_BDT_RATE;
+        const pointsValueConverted = (pointsValueInBDT * rateData.rate).toFixed(2);
+
+        // HTML আপডেট - ব্যালেন্স
+        document.getElementById("current-balance-symbol").innerText = rateData.symbol;
+        document.getElementById("current-balance-value").innerText = convertedBalance;
+        document.getElementById("current-balance-code").innerText = `(${currencyCode})`;
+
+        // HTML আপডেট - পয়েন্ট
+        document.getElementById("total-points-count").innerText = points;
+        document.getElementById("total-points-value-symbol").innerText = rateData.symbol;
+        document.getElementById("total-points-value").innerText = pointsValueConverted;
+
+        // HTML আপডেট - অন্যান্য
+        document.getElementById("total-referrals").innerText = referrals + " Users";
+        document.getElementById("user-country").innerText = country || "Bangladesh";
+
+        // কনভার্ট সেকশন আপডেট
+        document.getElementById("max-points").innerText = points;
+        const pointInput = document.getElementById("points-to-convert");
+        pointInput.max = points; // ইনপুটের ম্যাক্স ভ্যালু সেট
+    }
+
+    // ৭. পয়েন্ট কনভার্ট ইনপুট লজিক
+    const pointsInput = document.getElementById("points-to-convert");
+    const resultDisplay = document.getElementById("conversion-result");
+    const convertBtn = document.getElementById("convert-btn");
+
+    pointsInput.oninput = function() {
+        let inputPoints = parseInt(this.value) || 0;
+        const maxPoints = parseInt(this.max) || 0;
+
+        // ভ্যালিডেশন
+        if (inputPoints > maxPoints) {
+            inputPoints = maxPoints;
+            this.value = maxPoints;
+        }
+
+        const bdtValue = inputPoints * POINT_TO_BDT_RATE;
+        const currencyCode = document.getElementById("currency-selector-profile").value;
+        const rateData = CURRENCY_RATES[currencyCode];
+        const convertedValue = (bdtValue * rateData.rate).toFixed(2);
+
+        resultDisplay.innerText = `You will get ${rateData.symbol}${convertedValue} (${currencyCode})`;
+        
+        // বাটন এনাবল/ডিজেবল
+        if (inputPoints >= MIN_CONVERT_POINTS && inputPoints <= maxPoints) {
+            convertBtn.disabled = false;
+            resultDisplay.style.color = "#6c5ce7";
+        } else {
+            convertBtn.disabled = true;
+            resultDisplay.style.color = "#e74c3c";
+            if (inputPoints > 0 && inputPoints < MIN_CONVERT_POINTS) {
+                resultDisplay.innerText = `Minimum ${MIN_CONVERT_POINTS} points required.`;
+            }
+        }
+    };
+
+    // ৮. কনভার্ট বাটন ক্লিক (ট্রানজ্যাকশন)
+    convertBtn.onclick = async function() {
+        const pointsToConvert = parseInt(pointsInput.value) || 0;
+
+        if (pointsToConvert < MIN_CONVERT_POINTS) {
+            tg.showAlert("মিনিমাম ১০০০ পয়েন্ট প্রয়োজন।");
+            return;
+        }
+
+        convertBtn.disabled = true;
+        convertBtn.innerText = "Converting...";
+
+        try {
+            await db.runTransaction(async (transaction) => {
+                const doc = await transaction.get(userRef);
+                if (!doc.exists) throw "User does not exist!";
+
+                const currentPoints = doc.data().points || 0;
+                const currentBalance = doc.data().balance || 0;
+
+                if (currentPoints < pointsToConvert) {
+                    throw "আপনার পর্যাপ্ত পয়েন্ট নেই।";
+                }
+
+                // হিসাব: পয়েন্ট কেটে ব্যালেন্স (BDT) যোগ
+                const newPoints = currentPoints - pointsToConvert;
+                const amountToAddBDT = pointsToConvert * POINT_TO_BDT_RATE;
+                const newBalance = currentBalance + amountToAddBDT;
+
+                transaction.update(userRef, {
+                    points: newPoints,
+                    balance: newBalance
+                });
+            });
+
+            tg.showAlert(`সফল! ${pointsToConvert} পয়েন্ট কনভার্ট হয়েছে।`);
+            pointsInput.value = "";
+            resultDisplay.innerText = "Conversion successful!";
+            
+        } catch (error) {
+            console.error("Conversion failed: ", error);
+            tg.showAlert("সমস্যা হয়েছে: " + error);
+        } finally {
+            convertBtn.innerText = "Convert Points";
+            // বাটন ডিজেবল থাকবে যতক্ষণ না আবার ইনপুট দেওয়া হয়
+            convertBtn.disabled = true; 
+        }
+    };
+
+    // ৯. অন্যান্য বাটন ফাংশন
+    function openSupport() {
+        tg.openTelegramLink("https://t.me/Headline_newsbot"); 
+    }
+
+    function logout() {
+        document.getElementById("logout-popup").style.display = "flex";
+    }
+
+    function confirmLogout() {
+        tg.close();
+    }
+
+    // নেভিগেশন ফাংশন
+    function goToHome() { window.location.href = 'index.html'; }
+    function goToSupport() { window.location.href = 'support.html'; }
+    function goToNews() { window.location.href = 'news.html'; }
+    function goToWithdraw() { window.location.href = 'withdraw.html'; }
+    function goToProfile() { window.location.href = 'profile.html'; }
+
+    // অ্যাপ লোড
+    document.addEventListener('DOMContentLoaded', loadProfileData);
+
+</script>
+
+
+</body>
+</html>

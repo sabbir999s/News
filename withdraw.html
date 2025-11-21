@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Withdraw - Red Rose 🌹</title>
+  <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header class="header">
+    <div class="profile">
+      <img id="user-avatar" src="" alt="Avatar" class="avatar" />
+      <div class="user-info">
+        <div class="name-row">
+          <p id="user-name" class="username">লোড হচ্ছে...</p>
+          <div class="verified-badge">Verified</div>
+        </div>
+        <p class="balance">Balance: <span id="balance">0</span>৳</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <h1>Withdraw</h1>
+
+    <div class="balance-card">
+      <p>উইথড্রযোগ্য ব্যালেন্স</p>
+      <h2 id="withdrawable-balance">0৳</h2>
+    </div>
+    
+    <div class="note-card">
+      <p>আপনার উইথড্রটি সফল হতে সর্বনিম্ন ১০০ টাকা ব্যালেন্স ও ১০টি রেফার প্রয়োজন
+</p>
+    </div>
+
+    <div class="country-selector">
+      <label>দেশ নির্বাচন করুন</label>
+      <select id="country-select" class="input-field">
+        <option value="bd">বাংলাদেশ (+880)</option>
+        <option value="pk">পাকিস্তান (+92)</option>
+        <option value="in">ভারত (+91)</option>
+      </select>
+    </div>
+
+    <div class="withdraw-card">
+      <h3>পেমেন্ট মেথড</h3>
+      <div class="method-group" id="method-group">
+        </div>
+
+      <div class="phone-input-group">
+        <span id="country-code" class="country-code">+880</span>
+        <input type="text" id="phone-number" placeholder="মোবাইল নাম্বার" class="input-field phone-input" maxlength="10" />
+      </div>
+      
+      <p id="zero-error-message" class="status-text zero-error-text"></p>
+
+      <div id="amount-selector-container" class="amount-selector-container">
+        <input type="hidden" id="amount" value="100" />
+      </div>
+      
+      <button id="withdraw-btn" class="btn-primary">উইথড্র রিকোয়েস্ট করুন</button>
+      <p id="status-message" class="status-text"></p>
+    </div>
+
+    <div class="history-section">
+      <h3>উইথড্র হিস্টরি</h3>
+      <div id="history-list" class="history-list"></div>
+    </div>
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-item" onclick="goToHome()">Home</button>
+    <button class="nav-item" onclick="goToSupport()">Support</button>
+    <button class="nav-item" onclick="goToNews()">News</button>
+    <button class="nav-item active">Withdraw</button>
+     <button class="nav-item"onclick="goToProfile()">Profile</button>
+ 
+  </nav>
+
+ <script>
+// withdraw.html এর ফিক্সড স্ক্রিপ্ট
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBQf-ILFW6jDV-c_O2LG6elA5oAB84p2XQ",
+    authDomain: "top-news-91db8.firebaseapp.com",
+    databaseURL: "https://top-news-91db8-default-rtdb.firebaseio.com",
+    projectId: "top-news-91db8",
+    storageBucket: "top-news-91db8.firebasestorage.app",
+    messagingSenderId: "348369077928",
+    appId: "1:348369077928:web:7629c503c30cbf7450649d",
+    measurementId: "G-7GMX8N2NSC"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const tg = window.Telegram.WebApp;
+tg.ready(); tg.expand();
+
+const user = tg.initDataUnsafe.user;
+const userId = user?.id.toString() || 'unknown';
+const userRef = db.collection('users').doc(userId);
+let userData = {};
+
+// ইনপুট ভ্যালিডেশন (০ দিয়ে শুরু হবে না)
+const phoneNumberInput = document.getElementById('phone-number');
+const zeroErrorMessage = document.getElementById('zero-error-message');
+
+phoneNumberInput.addEventListener('input', function(e) {
+    this.value = this.value.replace(/[^0-9]/g, ''); 
+    if (this.value.length > 0 && this.value.startsWith('0')) {
+        this.value = this.value.substring(1); // ০ রিমুভ
+        zeroErrorMessage.textContent = '⚠️ নাম্বারের শুরুতে ০ দিবেন না।';
+        zeroErrorMessage.style.display = 'block';
+    } else {
+        zeroErrorMessage.style.display = 'none';
+    }
+});
+
+// নেভিগেশন
+function goToHome() { window.location.href = 'index.html'; }
+function goToSupport() { window.location.href = 'support.html'; }
+function goToNews() { window.location.href = 'news.html'; }
+function goToWithdraw() { window.location.href = 'withdraw.html'; }
+function goToProfile() { window.location.href = 'profile.html'; }
+
+// কান্ট্রি কনফিগ
+const countries = {
+  bd: { code: '+880', maxLength: 10, methods: ['bKash', 'Nagad'], methodNames: { bKash: 'বিকাশ', Nagad: 'নগদ' } },
+  pk: { code: '+92', maxLength: 10, methods: ['JazzCash'], methodNames: { JazzCash: 'JazzCash' } },
+  in: { code: '+91', maxLength: 10, methods: ['Paytm'], methodNames: { Paytm: 'Paytm' } }
+};
+let selectedCountry = 'bd';
+let selectedMethod = 'bKash';
+let selectedAmount = 100;
+
+// মেথড লোডার
+function loadMethods(config) {
+  const group = document.getElementById('method-group');
+  group.innerHTML = '';
+  selectedMethod = config.methods[0]; 
+  config.methods.forEach(method => {
+    const btn = document.createElement('button');
+    btn.className = 'method-btn ' + (method === selectedMethod ? 'active' : '');
+    btn.textContent = config.methodNames[method];
+    btn.onclick = () => {
+      document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedMethod = method;
+    };
+    group.appendChild(btn);
+  });
+  document.getElementById('country-code').textContent = config.code;
+  phoneNumberInput.maxLength = config.maxLength;
+  phoneNumberInput.placeholder = `${config.maxLength} ডিজিট নাম্বার দিন`;
+}
+
+// এমাউন্ট সিলেক্টর
+function loadAmountSelector() {
+    const container = document.getElementById('amount-selector-container');
+    // আগের বাটন থাকলে ক্লিয়ার
+    container.innerHTML = '<input type="hidden" id="amount" value="100" />';
+    
+    const grid = document.createElement('div');
+    grid.className = 'amount-selector-grid';
+    [100, 200, 500, 1000].forEach(amt => {
+        const btn = document.createElement('button');
+        btn.className = 'amount-btn ' + (amt === 100 ? 'active' : '');
+        btn.textContent = `${amt}৳`;
+        btn.onclick = () => {
+            document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedAmount = amt;
+        };
+        grid.appendChild(btn);
+    });
+    container.appendChild(grid);
+}
+
+// উইথড্র বাটন লজিক
+document.getElementById('withdraw-btn').onclick = async () => {
+    const status = document.getElementById('status-message');
+    const phone = phoneNumberInput.value.trim();
+    status.textContent = '';
+
+    if (userData.isBanned) {
+        status.textContent = 'একাউন্ট ব্যানড!'; status.style.color = 'red'; return;
+    }
+    
+    const config = countries[selectedCountry];
+    if (phone.length !== config.maxLength) {
+        status.textContent = `নাম্বারটি অবশ্যই ${config.maxLength} ডিজিটের হতে হবে।`;
+        status.style.color = 'red';
+        return;
+    }
+
+    // ডাটাবেস চেক
+    const doc = await userRef.get();
+    const data = doc.data();
+    const balance = data.balance || 0;
+    const referrals = data.referCount || 0; // referCount ফিল্ড চেক করা হলো
+
+    if (balance < selectedAmount) {
+        status.textContent = 'পর্যাপ্ত ব্যালেন্স নেই!'; status.style.color = 'red'; return;
+    }
+    if (referrals < 10) {
+        status.textContent = `উইথড্র করতে মিনিমাম ১০ রেফার লাগবে। আপনার আছে: ${referrals}`; status.style.color = 'red'; return;
+    }
+
+    // উইথড্র প্রসেস
+    const txnId = 'TXN-' + Date.now().toString().slice(-6);
+    
+    try {
+        await db.collection('withdraws').add({
+            userId: userId,
+            amount: selectedAmount,
+            method: selectedMethod,
+            phone: config.code + phone,
+            status: 'pending',
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            transactionId: txnId
+        });
+
+        // ব্যালেন্স কাটা
+        await userRef.update({
+            balance: firebase.firestore.FieldValue.increment(-selectedAmount)
+        });
+
+        status.innerHTML = `সফল! ট্রানজেকশন আইডি: ${txnId}`;
+        status.style.color = 'green';
+        phoneNumberInput.value = '';
+        tg.showAlert('উইথড্র রিকোয়েস্ট সফল হয়েছে!');
+        
+    } catch (e) {
+        console.error(e);
+        status.textContent = 'সার্ভার এরর, পরে চেষ্টা করুন।';
+    }
+};
+
+// কান্ট্রি চেঞ্জ
+document.getElementById('country-select').onchange = (e) => {
+    selectedCountry = e.target.value;
+    loadMethods(countries[selectedCountry]);
+};
+
+// ইউজার ডাটা লোড
+userRef.onSnapshot(doc => {
+    if(doc.exists) {
+        userData = doc.data();
+        document.getElementById('balance').textContent = userData.balance || 0;
+        document.getElementById('withdrawable-balance').textContent = (userData.balance || 0) + '৳';
+    }
+});
+
+// ইনিশিয়ালাইজ
+loadMethods(countries['bd']);
+loadAmountSelector();
+document.getElementById('user-name').textContent = user?.first_name || 'User';
+
+</script>
+
+
+</body>
+</html>

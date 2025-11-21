@@ -87,15 +87,23 @@ const db = firebase.firestore();
 let VideoAdController = window.Adsgram?.init({ blockId: VIDEO_BLOCK_ID });
 let InterstitialAdController = window.Adsgram?.init({ blockId: INTERSTITIAL_BLOCK_ID });
 
-// ইউজার আইডি সেটআপ
-let currentUser = localStorage.getItem('newsApp_guestId'); 
-if (window.Telegram?.WebApp) {
-    Telegram.WebApp.ready();
-    currentUser = Telegram.WebApp.initDataUnsafe.user?.id?.toString() || 'guest_' + Date.now();
-} else if (!currentUser) {
-    currentUser = "guest_" + Date.now();
-    localStorage.setItem('newsApp_guestId', currentUser);
+// 🔥 নতুন কোড শুরু: ইউজার আইডি লোডিং লজিক ফিক্স
+let currentUser = null; 
+const tg = window.Telegram.WebApp;
+
+if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+    tg.ready();
+    tg.expand();
+    currentUser = tg.initDataUnsafe.user.id.toString();
+} else {
+    // যদি টেলিগ্রাম ডেটা না থাকে, তবে লোকাল স্টোরেজ বা জেনারেটেড আইডি ব্যবহার
+    currentUser = localStorage.getItem('newsApp_guestId');
+    if (!currentUser) {
+        currentUser = "guest_" + Date.now();
+        localStorage.setItem('newsApp_guestId', currentUser);
+    }
 }
+// 🔥 নতুন কোড শেষ: ইউজার আইডি লোডিং লজিক ফিক্স
 
 let currentTask = null;
 let timerInterval = null;
@@ -113,33 +121,55 @@ function loadNewsFirestore() {
     const container = document.getElementById("news-task-list");
     container.innerHTML = '<p style="text-align:center;">নিউজ লোড হচ্ছে...</p>';
 
-    db.collection("news").orderBy("timestamp", "desc").onSnapshot(snap => {
+    // শুধুমাত্র সেই নিউজ দেখাবে যা এখনো পড়া হয়নি
+    db.collection("news").orderBy("timestamp", "desc").onSnapshot(async snap => {
         container.innerHTML = "";
         if(snap.empty) {
             container.innerHTML = '<p style="text-align:center;">কোনো নিউজ নেই।</p>';
             return;
         }
+        
+        // ইউজার ডেটা লোড
+        let userData = null;
+        if (currentUser && !currentUser.startsWith('guest_')) {
+            const userDoc = await db.collection('users').doc(currentUser).get();
+            userData = userDoc.data();
+        }
 
         snap.forEach(doc => {
             const n = doc.data();
             const readKey = `read_${currentUser}_${doc.id}`; 
-            const already = localStorage.getItem(readKey);
+            // 🔥 ফিক্স: ফায়ারবেসে adsWatchedToday চেক করা
+            const alreadyRead = localStorage.getItem(readKey) || (userData && userData.readNews?.[doc.id]);
+            const isDailyLimitReached = userData?.adsWatchedToday >= 10;
             
-            const buttonText = already ? "View News" : "Earn Now";
-            // ফিক্স: এখানে সরাসরি ফাংশন কল স্ট্রিং হিসেবে দেওয়া হলো
-            const onClickFn = `openNewsTask('${doc.id}')`; 
+            let buttonText = "Earn Now";
+            let onClickFn = `openNewsTask('${doc.id}')`; 
+            let isDisabled = false;
+
+            if (alreadyRead) {
+                buttonText = "Viewed";
+                onClickFn = `openNewsTask('${doc.id}', false)`; // শুধু দেখার জন্য
+                isDisabled = true;
+            } else if (isDailyLimitReached) {
+                buttonText = "Limit Reached";
+                onClickFn = `tg.showAlert('আজকের সীমা শেষ হয়েছে।');`;
+                isDisabled = true;
+            } else {
+                buttonText = "Earn Now";
+            }
             
             container.innerHTML += `
-                <div class="news-earn-card">
+                <div class="news-earn-card" style="${alreadyRead || isDailyLimitReached ? 'opacity: 0.6;' : ''}">
                     <img src="${n.imageUrl}" class="news-image" onerror="this.style.display='none'">
                     <div class="news-content">
                         <h3 class="news-title">${n.title}</h3>
                         <p class="news-description">${n.description}</p>
                         <div class="task-footer">
-                            <button class="btn-earn" onclick="${onClickFn}"> 
+                            <button class="btn-earn" onclick="${onClickFn}" ${isDisabled ? 'disabled' : ''}> 
                                 ${buttonText}
                             </button>
-                            ${!already ? `<div class="earn-info"><strong>৳${n.points}</strong> • ${Math.ceil(n.readTime/60)} min</div>` : ''}
+                            ${!alreadyRead && !isDailyLimitReached ? `<div class="earn-info"><strong>৳${n.points}</strong> • ${Math.ceil(n.readTime/60)} min</div>` : ''}
                         </div>
                     </div>
                 </div>`;
@@ -148,31 +178,27 @@ function loadNewsFirestore() {
 }
 
 // টাস্ক ওপেন করা (বিজ্ঞাপন সহ)
-window.openNewsTask = async function(id) {
+window.openNewsTask = async function(id, isEarningAttempt=true) {
     const doc = await db.collection("news").doc(id).get();
     if (!doc.exists) return; 
 
     currentTask = {...doc.data(), id: doc.id}; 
     
     // বিজ্ঞাপন দেখান
-    if (VideoAdController) {
+    if (isEarningAttempt && VideoAdController) {
         VideoAdController.show().then(() => {
-            startReadingLogic(id);
+            startReadingLogic(id, isEarningAttempt);
         }).catch((e) => {
             console.log("Ad skipped/failed", e);
-            startReadingLogic(id); // ফেইল করলেও টাস্ক শুরু হবে
+            startReadingLogic(id, isEarningAttempt); // ফেইল করলেও টাস্ক শুরু হবে
         });
     } else {
-        startReadingLogic(id);
+        startReadingLogic(id, isEarningAttempt);
     }
 };
 
 // পড়ার লজিক এবং টাইমার
-function startReadingLogic(id) {
-    const readKey = `read_${currentUser}_${currentTask.id}`; 
-    const alreadyRead = localStorage.getItem(readKey);
-    const isEarning = !alreadyRead;
-
+function startReadingLogic(id, isEarning) {
     const timerDisplay = document.getElementById("timer-display");
     const completeBtn = document.getElementById("complete-btn");
     const modal = document.getElementById("task-modal");
@@ -205,12 +231,18 @@ function startReadingLogic(id) {
         timerDisplay.style.display = "none";
         completeBtn.style.display = "none";
     }
+    
+    // 🔥 নতুন কোড: টাস্ক শুরু হওয়ার সময় Back বাটন হাইড করুন
+    tg.BackButton.hide();
 }
 
 // টাস্ক শেষ করা
-function finishTask(addMoney) {
+async function finishTask(addMoney) {
     const modal = document.getElementById("task-modal");
     const iframe = document.getElementById("news-iframe");
+    
+    // 🔥 নতুন কোড: টাস্ক শেষ হওয়ার সময় Back বাটন দেখান
+    tg.BackButton.show();
     
     // ইন্টারস্টিশিয়াল অ্যাড (ক্লোজ করার সময়)
     if (InterstitialAdController) {
@@ -218,21 +250,42 @@ function finishTask(addMoney) {
     }
 
     if (addMoney) {
-        // টাকা অ্যাড করা (লোকাল স্টোরেজ + UI)
-        localStorage.setItem(`read_${currentUser}_${currentTask.id}`, "true");
-        
-        // Firestore আপডেট (অপশনাল, যদি তুমি সার্ভারে পয়েন্ট রাখতে চাও)
-        // db.collection('users').doc(currentUser).update(...) 
-        
-        // সাকসেস মেসেজ
-        document.getElementById("earn-message").innerText = `অভিনন্দন! ৳${currentTask.points} যুক্ত হয়েছে!`;
-        document.getElementById("success-popup").style.display = "flex";
-        setTimeout(() => {
-            document.getElementById("success-popup").style.display = "none";
+        // টাকা অ্যাড করা
+        try {
+             // ফায়ারবেসে ব্যালেন্স এবং adsWatchedToday আপডেট
+            if (currentUser && !currentUser.startsWith('guest_')) {
+                const userRef = db.collection('users').doc(currentUser);
+                
+                await userRef.update({
+                    balance: firebase.firestore.FieldValue.increment(currentTask.points),
+                    adsWatchedToday: firebase.firestore.FieldValue.increment(1),
+                    // নিউজটি পড়া হয়েছে তা সেভ করা
+                    [`readNews.${currentTask.id}`]: true 
+                });
+            } else {
+                 // Guest user দের জন্য লোকাল স্টোরেজ আপডেট
+                localStorage.setItem(`read_${currentUser}_${currentTask.id}`, "true");
+            }
+
+            // সাকসেস মেসেজ
+            document.getElementById("earn-message").innerText = `অভিনন্দন! ৳${currentTask.points} যুক্ত হয়েছে!`;
+            document.getElementById("success-popup").style.display = "flex";
+            setTimeout(() => {
+                document.getElementById("success-popup").style.display = "none";
+                modal.style.display = "none";
+                iframe.src = "";
+                loadNewsFirestore(); // লিস্ট রিফ্রেশ
+            }, 2000);
+            
+        } catch (e) {
+            console.error("Firebase update failed:", e);
+            tg.showAlert("টাকা যুক্ত করতে সমস্যা হয়েছে: " + e.message);
+            // ব্যর্থ হলেও টাস্ক বন্ধ করুন
             modal.style.display = "none";
             iframe.src = "";
-            loadNewsFirestore(); // লিস্ট রিফ্রেশ
-        }, 2000);
+            loadNewsFirestore();
+        }
+
     } else {
         modal.style.display = "none";
         iframe.src = "";
@@ -244,6 +297,8 @@ window.closeTask = function() {
     clearInterval(timerInterval);
     document.getElementById("task-modal").style.display = "none";
     document.getElementById("news-iframe").src = "";
+    // 🔥 নতুন কোড: বন্ধ করার সময় Back বাটন দেখান
+    tg.BackButton.show();
 }
 
 function formatTime(s) {
@@ -253,6 +308,7 @@ function formatTime(s) {
 // শুরু করুন
 loadNewsFirestore();
 </script>
+
 
 </body>
 </html>

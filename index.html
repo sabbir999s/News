@@ -39,6 +39,11 @@
       </div>
     </div>
 
+    
+     <div class="title" style="margin-top: 20px;">Latest News <span style="font-size: 14px; color: #6c5ce7; cursor: pointer;" onclick="location.href='news.html'">View All ></span></div>
+        <div id="latest-news-list" class="news-scroll-container"></div>
+
+    
     <div class="referral-card">
       <h2>Refer & Earn More!</h2>
       <p class="referral-text">
@@ -180,6 +185,33 @@ function getPopupHTML(title, message, buttonText = null, buttonAction = null) {
   `;
 }
 
+  
+ function loadNews() {
+    // ✅ Firestore: news collection থেকে ডেটা লোড
+    db.collection("news").orderBy("timestamp", "desc").limit(5).onSnapshot(snap => {
+        const container = document.getElementById("latest-news-list");
+        container.innerHTML = "";
+        
+        snap.docs.forEach(doc => {
+            const n = doc.data();
+            const card = document.createElement("div");
+            card.className = "news-card";
+            card.onclick = () => location.href = `news.html?id=${doc.id}`; // doc.id ব্যবহার করা হলো
+            card.innerHTML = `
+                <img src="${n.imageUrl}" alt="News Image">
+                <div class="news-card-content">
+                    <h4>${n.title}</h4>
+                    <p>${n.description.substring(0,70)}...</p>
+                    <small>Earn ${n.points || 0} Points • ${Math.ceil(n.readTime/60)} মিনিট</small>
+                </div>`;
+            container.appendChild(card);
+        });
+    });
+}
+ 
+  
+  
+  
 // 🔥 নতুন সাসপেনশন টাইমার ফাংশন যোগ করা হলো
 function startSuspensionTimer(bannedUntilDate) {
     // আগের কোনো পপআপ থাকলে সেটি সরিয়ে দিন

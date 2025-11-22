@@ -6,9 +6,11 @@
     <title>News - Earn</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> 
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script> 
+    
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script> 
+    
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 
@@ -34,7 +36,6 @@
         <div id="news-task-list"></div>
     </div>
 
-    <!-- Task Modal (In-App Browser + Timer) -->
     <div id="task-modal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:white; z-index:2000; display:none; padding:10px;">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px;">
             <button onclick="closeTask()" style="background:none; border:none; font-size:24px; color:#6a5acd;">Close</button>
@@ -44,7 +45,6 @@
         <iframe id="news-iframe" style="width:100%; height:calc(100% - 60px); border:none; margin-top:10px;" allow="fullscreen; geolocation; camera; microphone"></iframe>
     </div>
 
-    <!-- Success Popup -->
     <div class="popup-overlay" id="success-popup">
         <div class="popup">
             <i class="fas fa-check-circle"></i><br><br>
@@ -54,13 +54,12 @@
     </div>
 
     <nav class="bottom-nav">
-  <button class="nav-item" onclick="goToHome()">Home</button>
-  <button class="nav-item" onclick="goToSupport()">Support</button>
-  <button class="nav-item active">News</button>
-  <button class="nav-item"onclick="goToWithdraw()">Withdraw</button>
-  <button class="nav-item"onclick="goToProfile()">Profile</button>
-  
-</nav>
+      <button class="nav-item" onclick="goToHome()">Home</button>
+      <button class="nav-item" onclick="goToSupport()">Support</button>
+      <button class="nav-item active">News</button>
+      <button class="nav-item"onclick="goToWithdraw()">Withdraw</button>
+      <button class="nav-item"onclick="goToProfile()">Profile</button>
+    </nav>
 
     <script>
 // news.html এর ফিক্সড স্ক্রিপ্ট
@@ -80,6 +79,7 @@ const firebaseConfig = {
     measurementId: "G-7GMX8N2NSC"
 };
 
+// 🔥 ফিক্স: নিশ্চিত করা হলো যে firebase-app লোড হওয়ার পরই ইনিশিয়ালাইজেশন হচ্ছে
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore(); 
 
@@ -120,7 +120,7 @@ function loadNewsFirestore() {
     const container = document.getElementById("news-task-list");
     container.innerHTML = '<p style="text-align:center;">নিউজ লোড হচ্ছে...</p>';
 
-    // 🔥 প্রধান ফিক্স: onSnapshot কে get() এ পরিবর্তন করা
+    // 🔥 প্রধান ফিক্স: get() ব্যবহার করা হলো যাতে Webview তে স্থিতিশীল হয়
     db.collection("news").orderBy("timestamp", "desc").get()
         .then(async snap => {
             container.innerHTML = "";
@@ -149,7 +149,7 @@ function loadNewsFirestore() {
 
                 if (alreadyRead) {
                     buttonText = "Viewed";
-                    onClickFn = `openNewsTask('${doc.id}', false)`; // শুধু দেখার জন্য
+                    onClickFn = `openNewsTask('${doc.id}', false)`; 
                     isDisabled = true;
                 } else if (isDailyLimitReached) {
                     buttonText = "Limit Reached";
@@ -178,8 +178,7 @@ function loadNewsFirestore() {
         .catch(error => {
             // 🔥 এরর হ্যান্ডলিং যোগ করা
             console.error("Firestore fetch error:", error);
-            container.innerHTML = `<p style="text-align:center; color: #ff7675;">নিউজ লোড করতে সমস্যা হয়েছে। অনুগ্রহ করে ইন্টারনেট সংযোগ পরীক্ষা করুন। Error: ${error.message}</p>`;
-            // টেলিগ্রামের মাধ্যমে ইউজারকে এরর দেখানো
+            container.innerHTML = `<p style="text-align:center; color: #ff7675;">নিউজ লোড করতে সমস্যা হয়েছে। এরর: ${error.message}</p>`;
             if (window.Telegram && window.Telegram.WebApp) {
                 tg.showAlert(`❌ নিউজ লোড ত্রুটি: ${error.message}`);
             }
@@ -188,137 +187,27 @@ function loadNewsFirestore() {
 
 // টাস্ক ওপেন করা (বিজ্ঞাপন সহ)
 window.openNewsTask = async function(id, isEarningAttempt=true) {
-    const doc = await db.collection("news").doc(id).get();
-    if (!doc.exists) return; 
+    try {
+        const doc = await db.collection("news").doc(id).get();
+        if (!doc.exists) return; 
 
-    currentTask = {...doc.data(), id: doc.id}; 
-    
-    // বিজ্ঞাপন দেখান
-    if (isEarningAttempt && VideoAdController) {
-        VideoAdController.show().then(() => {
+        currentTask = {...doc.data(), id: doc.id}; 
+        
+        // বিজ্ঞাপন দেখান
+        if (isEarningAttempt && VideoAdController) {
+            VideoAdController.show().then(() => {
+                startReadingLogic(id, isEarningAttempt);
+            }).catch((e) => {
+                console.log("Ad skipped/failed", e);
+                startReadingLogic(id, isEarningAttempt); // ফেইল করলেও টাস্ক শুরু হবে
+            });
+        } else {
             startReadingLogic(id, isEarningAttempt);
-        }).catch((e) => {
-            console.log("Ad skipped/failed", e);
-            startReadingLogic(id, isEarningAttempt); // ফেইল করলেও টাস্ক শুরু হবে
-        });
-    } else {
-        startReadingLogic(id, isEarningAttempt);
+        }
+    } catch (e) {
+         tg.showAlert("টাস্ক লোড করতে এরর: " + e.message);
     }
 };
 
 // পড়ার লজিক এবং টাইমার
 function startReadingLogic(id, isEarning) {
-    const timerDisplay = document.getElementById("timer-display");
-    const completeBtn = document.getElementById("complete-btn");
-    const modal = document.getElementById("task-modal");
-    const iframe = document.getElementById("news-iframe");
-
-    modal.style.display = "block";
-    iframe.src = currentTask.link;
-
-    if (isEarning) {
-        timer = currentTask.readTime;
-        timerDisplay.style.display = "block";
-        completeBtn.style.display = "block";
-        completeBtn.disabled = true;
-        timerDisplay.innerText = `Time: ${formatTime(timer)}`;
-        
-        clearInterval(timerInterval);
-        timerInterval = setInterval(() => {
-            timer--;
-            timerDisplay.innerText = `Time: ${formatTime(timer)}`;
-            if (timer <= 0) {
-                clearInterval(timerInterval);
-                timerDisplay.innerText = "Completed!";
-                completeBtn.disabled = false;
-                // কমপ্লিট বাটন লজিক
-                completeBtn.onclick = () => finishTask(true);
-            }
-        }, 1000);
-    } else {
-        // শুধু পড়ার জন্য
-        timerDisplay.style.display = "none";
-        completeBtn.style.display = "none";
-    }
-    
-    // 🔥 নতুন কোড: টাস্ক শুরু হওয়ার সময় Back বাটন হাইড করুন
-    tg.BackButton.hide();
-}
-
-// টাস্ক শেষ করা
-async function finishTask(addMoney) {
-    const modal = document.getElementById("task-modal");
-    const iframe = document.getElementById("news-iframe");
-    
-    // 🔥 নতুন কোড: টাস্ক শেষ হওয়ার সময় Back বাটন দেখান
-    tg.BackButton.show();
-    
-    // ইন্টারস্টিশিয়াল অ্যাড (ক্লোজ করার সময়)
-    if (InterstitialAdController) {
-        InterstitialAdController.show().catch(e => console.log(e));
-    }
-
-    if (addMoney) {
-        // টাকা অ্যাড করা
-        try {
-             // ফায়ারবেসে ব্যালেন্স এবং adsWatchedToday আপডেট
-            if (currentUser && !currentUser.startsWith('guest_')) {
-                const userRef = db.collection('users').doc(currentUser);
-                
-                await userRef.update({
-                    balance: firebase.firestore.FieldValue.increment(currentTask.points),
-                    adsWatchedToday: firebase.firestore.FieldValue.increment(1),
-                    // নিউজটি পড়া হয়েছে তা সেভ করা
-                    [`readNews.${currentTask.id}`]: true 
-                });
-            } else {
-                 // Guest user দের জন্য লোকাল স্টোরেজ আপডেট
-                localStorage.setItem(`read_${currentUser}_${currentTask.id}`, "true");
-            }
-
-            // সাকসেস মেসেজ
-            document.getElementById("earn-message").innerText = `অভিনন্দন! ৳${currentTask.points} যুক্ত হয়েছে!`;
-            document.getElementById("success-popup").style.display = "flex";
-            setTimeout(() => {
-                document.getElementById("success-popup").style.display = "none";
-                modal.style.display = "none";
-                iframe.src = "";
-                loadNewsFirestore(); // লিস্ট রিফ্রেশ
-            }, 2000);
-            
-        } catch (e) {
-            console.error("Firebase update failed:", e);
-            tg.showAlert("টাকা যুক্ত করতে সমস্যা হয়েছে: " + e.message);
-            // ব্যর্থ হলেও টাস্ক বন্ধ করুন
-            modal.style.display = "none";
-            iframe.src = "";
-            loadNewsFirestore();
-        }
-
-    } else {
-        modal.style.display = "none";
-        iframe.src = "";
-    }
-}
-
-// ক্লোজ বাটন (উপরে বামে)
-window.closeTask = function() {
-    clearInterval(timerInterval);
-    document.getElementById("task-modal").style.display = "none";
-    document.getElementById("news-iframe").src = "";
-    // 🔥 নতুন কোড: বন্ধ করার সময় Back বাটন দেখান
-    tg.BackButton.show();
-}
-
-function formatTime(s) {
-    return `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
-}
-
-// শুরু করুন
-loadNewsFirestore();
-</script>
-
-
-
-</body>
-</html>

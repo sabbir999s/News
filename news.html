@@ -70,7 +70,7 @@ const VIDEO_BLOCK_ID = "17904";
 const INTERSTITIAL_BLOCK_ID = "int-17904";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBQf-ILFW6jDV-c_O2LG6elA5oAB84p2XQ",
+    apiKey: "AIzaSyBQf-ILFW6jDV-c_O2LG2elA5oAB84p2XQ",
     authDomain: "top-news-91db8.firebaseapp.com",
     databaseURL: "https://top-news-91db8-default-rtdb.firebaseio.com",
     projectId: "top-news-91db8",
@@ -87,7 +87,7 @@ const db = firebase.firestore();
 let VideoAdController = window.Adsgram?.init({ blockId: VIDEO_BLOCK_ID });
 let InterstitialAdController = window.Adsgram?.init({ blockId: INTERSTITIAL_BLOCK_ID });
 
-// 🔥 নতুন কোড শুরু: ইউজার আইডি লোডিং লজিক ফিক্স
+// 🔥 ইউজার আইডি লোডিং লজিক
 let currentUser = null; 
 const tg = window.Telegram.WebApp;
 
@@ -103,80 +103,87 @@ if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
         localStorage.setItem('newsApp_guestId', currentUser);
     }
 }
-// 🔥 নতুন কোড শেষ: ইউজার আইডি লোডিং লজিক ফিক্স
 
 let currentTask = null;
 let timerInterval = null;
 let timer = 0;
 
-// নেভিগেশন
-// 🔥 নেভিগেশন ফিক্স: window.location.href কলকে setTimeout-এ রাখা হলো
+// নেভিগেশন (পারফরম্যান্স ফিক্স সহ)
 function goToHome() { setTimeout(() => window.location.href = 'index.html', 0); }
 function goToSupport() { setTimeout(() => window.location.href = 'support.html', 0); }
-function goToNews() { setTimeout(() => window.location.href = 'news.html', 0); } // নামের বানান ঠিক করা হয়েছে
+function goToNews() { setTimeout(() => window.location.href = 'news.html', 0); } 
 function goToWithdraw() { setTimeout(() => window.location.href = 'withdraw.html', 0); }
 function goToProfile() { setTimeout(() => window.location.href = 'profile.html', 0); }
-// 🔥 নেভিগেশন ফিক্স শেষ
 
 // নিউজ লোড করা
 function loadNewsFirestore() {
     const container = document.getElementById("news-task-list");
     container.innerHTML = '<p style="text-align:center;">নিউজ লোড হচ্ছে...</p>';
 
-    // শুধুমাত্র সেই নিউজ দেখাবে যা এখনো পড়া হয়নি
-    db.collection("news").orderBy("timestamp", "desc").onSnapshot(async snap => {
-        container.innerHTML = "";
-        if(snap.empty) {
-            container.innerHTML = '<p style="text-align:center;">কোনো নিউজ নেই।</p>';
-            return;
-        }
-        
-        // ইউজার ডেটা লোড
-        let userData = null;
-        if (currentUser && !currentUser.startsWith('guest_')) {
-            const userDoc = await db.collection('users').doc(currentUser).get();
-            userData = userDoc.data();
-        }
-
-        snap.forEach(doc => {
-            const n = doc.data();
-            const readKey = `read_${currentUser}_${doc.id}`; 
-            // 🔥 ফিক্স: ফায়ারবেসে adsWatchedToday চেক করা
-            const alreadyRead = localStorage.getItem(readKey) || (userData && userData.readNews?.[doc.id]);
-            const isDailyLimitReached = userData?.adsWatchedToday >= 10;
-            
-            let buttonText = "Earn Now";
-            let onClickFn = `openNewsTask('${doc.id}')`; 
-            let isDisabled = false;
-
-            if (alreadyRead) {
-                buttonText = "Viewed";
-                onClickFn = `openNewsTask('${doc.id}', false)`; // শুধু দেখার জন্য
-                isDisabled = true;
-            } else if (isDailyLimitReached) {
-                buttonText = "Limit Reached";
-                onClickFn = `tg.showAlert('আজকের সীমা শেষ হয়েছে।');`;
-                isDisabled = true;
-            } else {
-                buttonText = "Earn Now";
+    // 🔥 প্রধান ফিক্স: onSnapshot কে get() এ পরিবর্তন করা
+    db.collection("news").orderBy("timestamp", "desc").get()
+        .then(async snap => {
+            container.innerHTML = "";
+            if(snap.empty) {
+                container.innerHTML = '<p style="text-align:center;">কোনো নিউজ নেই।</p>';
+                return;
             }
             
-            container.innerHTML += `
-                <div class="news-earn-card" style="${alreadyRead || isDailyLimitReached ? 'opacity: 0.6;' : ''}">
-                    <img src="${n.imageUrl}" class="news-image" onerror="this.style.display='none'">
-                    <div class="news-content">
-                        <h3 class="news-title">${n.title}</h3>
-                        <p class="news-description">${n.description}</p>
-                        <div class="task-footer">
-                            <button class="btn-earn" onclick="${onClickFn}" ${isDisabled ? 'disabled' : ''}> 
-                                ${buttonText}
-                            </button>
-                            ${!alreadyRead && !isDailyLimitReached ? `<div class="earn-info"><strong>৳${n.points}</strong> • ${Math.ceil(n.readTime/60)} min</div>` : ''}
+            // ইউজার ডেটা লোড
+            let userData = null;
+            if (currentUser && !currentUser.startsWith('guest_')) {
+                const userDoc = await db.collection('users').doc(currentUser).get();
+                userData = userDoc.data();
+            }
+
+            snap.forEach(doc => {
+                const n = doc.data();
+                const readKey = `read_${currentUser}_${doc.id}`; 
+                
+                const alreadyRead = localStorage.getItem(readKey) || (userData && userData.readNews?.[doc.id]);
+                const isDailyLimitReached = userData?.adsWatchedToday >= 10;
+                
+                let buttonText = "Earn Now";
+                let onClickFn = `openNewsTask('${doc.id}')`; 
+                let isDisabled = false;
+
+                if (alreadyRead) {
+                    buttonText = "Viewed";
+                    onClickFn = `openNewsTask('${doc.id}', false)`; // শুধু দেখার জন্য
+                    isDisabled = true;
+                } else if (isDailyLimitReached) {
+                    buttonText = "Limit Reached";
+                    onClickFn = `tg.showAlert('আজকের সীমা শেষ হয়েছে।');`;
+                    isDisabled = true;
+                } else {
+                    buttonText = "Earn Now";
+                }
+                
+                container.innerHTML += `
+                    <div class="news-earn-card" style="${alreadyRead || isDailyLimitReached ? 'opacity: 0.6;' : ''}">
+                        <img src="${n.imageUrl}" class="news-image" onerror="this.style.display='none'">
+                        <div class="news-content">
+                            <h3 class="news-title">${n.title}</h3>
+                            <p class="news-description">${n.description}</p>
+                            <div class="task-footer">
+                                <button class="btn-earn" onclick="${onClickFn}" ${isDisabled ? 'disabled' : ''}> 
+                                    ${buttonText}
+                                </button>
+                                ${!alreadyRead && !isDailyLimitReached ? `<div class="earn-info"><strong>৳${n.points}</strong> • ${Math.ceil(n.readTime/60)} min</div>` : ''}
+                            </div>
                         </div>
-                    </div>
-                </div>`;
+                    </div>`;
+            });
+        })
+        .catch(error => {
+            // 🔥 এরর হ্যান্ডলিং যোগ করা
+            console.error("Firestore fetch error:", error);
+            container.innerHTML = `<p style="text-align:center; color: #ff7675;">নিউজ লোড করতে সমস্যা হয়েছে। অনুগ্রহ করে ইন্টারনেট সংযোগ পরীক্ষা করুন। Error: ${error.message}</p>`;
+            // টেলিগ্রামের মাধ্যমে ইউজারকে এরর দেখানো
+            if (window.Telegram && window.Telegram.WebApp) {
+                tg.showAlert(`❌ নিউজ লোড ত্রুটি: ${error.message}`);
+            }
         });
-    });
 }
 
 // টাস্ক ওপেন করা (বিজ্ঞাপন সহ)
@@ -310,6 +317,7 @@ function formatTime(s) {
 // শুরু করুন
 loadNewsFirestore();
 </script>
+
 
 
 </body>

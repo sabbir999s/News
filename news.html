@@ -6,14 +6,6 @@
     <title>News - Earn</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> 
-    
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script> 
-    
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
-
     <style>
         .news-earn-card { background:white; border-radius:15px; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.05); overflow:hidden; }
         .news-image { width:100%; height:140px; object-fit:cover; }
@@ -61,6 +53,12 @@
       <button class="nav-item"onclick="goToProfile()">Profile</button>
     </nav>
 
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script> 
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+    
     <script>
 // news.html এর ফিক্সড স্ক্রিপ্ট
 
@@ -69,7 +67,7 @@ const VIDEO_BLOCK_ID = "17904";
 const INTERSTITIAL_BLOCK_ID = "int-17904";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBQf-ILFW6jDV-c_O2LG2elA5oAB84p2XQ",
+    apiKey: "AIzaSyBQf-ILFW6jDV-c_O2LG6elA5oAB84p2XQ",
     authDomain: "top-news-91db8.firebaseapp.com",
     databaseURL: "https://top-news-91db8-default-rtdb.firebaseio.com",
     projectId: "top-news-91db8",
@@ -79,7 +77,7 @@ const firebaseConfig = {
     measurementId: "G-7GMX8N2NSC"
 };
 
-// 🔥 ফিক্স: নিশ্চিত করা হলো যে firebase-app লোড হওয়ার পরই ইনিশিয়ালাইজেশন হচ্ছে
+// 🔥 ইনিশিয়ালাইজেশন: লাইব্রেরি লোড হওয়ার পরেই এটি চলছে
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore(); 
 
@@ -211,3 +209,114 @@ window.openNewsTask = async function(id, isEarningAttempt=true) {
 
 // পড়ার লজিক এবং টাইমার
 function startReadingLogic(id, isEarning) {
+    const timerDisplay = document.getElementById("timer-display");
+    const completeBtn = document.getElementById("complete-btn");
+    const modal = document.getElementById("task-modal");
+    const iframe = document.getElementById("news-iframe");
+
+    modal.style.display = "block";
+    iframe.src = currentTask.link;
+
+    if (isEarning) {
+        timer = currentTask.readTime;
+        timerDisplay.style.display = "block";
+        completeBtn.style.display = "block";
+        completeBtn.disabled = true;
+        timerDisplay.innerText = `Time: ${formatTime(timer)}`;
+        
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            timer--;
+            timerDisplay.innerText = `Time: ${formatTime(timer)}`;
+            if (timer <= 0) {
+                clearInterval(timerInterval);
+                timerDisplay.innerText = "Completed!";
+                completeBtn.disabled = false;
+                // কমপ্লিট বাটন লজিক
+                completeBtn.onclick = () => finishTask(true);
+            }
+        }, 1000);
+    } else {
+        // শুধু পড়ার জন্য
+        timerDisplay.style.display = "none";
+        completeBtn.style.display = "none";
+    }
+    
+    // টাস্ক শুরু হওয়ার সময় Back বাটন হাইড করুন
+    tg.BackButton.hide();
+}
+
+// টাস্ক শেষ করা
+async function finishTask(addMoney) {
+    const modal = document.getElementById("task-modal");
+    const iframe = document.getElementById("news-iframe");
+    
+    // টাস্ক শেষ হওয়ার সময় Back বাটন দেখান
+    tg.BackButton.show();
+    
+    // ইন্টারস্টিশিয়াল অ্যাড (ক্লোজ করার সময়)
+    if (InterstitialAdController) {
+        InterstitialAdController.show().catch(e => console.log(e));
+    }
+
+    if (addMoney) {
+        // টাকা অ্যাড করা
+        try {
+             // ফায়ারবেসে ব্যালেন্স এবং adsWatchedToday আপডেট
+            if (currentUser && !currentUser.startsWith('guest_')) {
+                const userRef = db.collection('users').doc(currentUser);
+                
+                await userRef.update({
+                    balance: firebase.firestore.FieldValue.increment(currentTask.points),
+                    adsWatchedToday: firebase.firestore.FieldValue.increment(1),
+                    [`readNews.${currentTask.id}`]: true 
+                });
+            } else {
+                 // Guest user দের জন্য লোকাল স্টোরেজ আপডেট
+                localStorage.setItem(`read_${currentUser}_${currentTask.id}`, "true");
+            }
+
+            // সাকসেস মেসেজ
+            document.getElementById("earn-message").innerText = `অভিনন্দন! ৳${currentTask.points} যুক্ত হয়েছে!`;
+            document.getElementById("success-popup").style.display = "flex";
+            setTimeout(() => {
+                document.getElementById("success-popup").style.display = "none";
+                modal.style.display = "none";
+                iframe.src = "";
+                loadNewsFirestore(); // লিস্ট রিফ্রেশ
+            }, 2000);
+            
+        } catch (e) {
+            console.error("Firebase update failed:", e);
+            tg.showAlert("টাকা যুক্ত করতে সমস্যা হয়েছে: " + e.message);
+            // ব্যর্থ হলেও টাস্ক বন্ধ করুন
+            modal.style.display = "none";
+            iframe.src = "";
+            loadNewsFirestore();
+        }
+
+    } else {
+        modal.style.display = "none";
+        iframe.src = "";
+    }
+}
+
+// ক্লোজ বাটন (উপরে বামে)
+window.closeTask = function() {
+    clearInterval(timerInterval);
+    document.getElementById("task-modal").style.display = "none";
+    document.getElementById("news-iframe").src = "";
+    // নতুন কোড: বন্ধ করার সময় Back বাটন দেখান
+    tg.BackButton.show();
+}
+
+function formatTime(s) {
+    return `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
+}
+
+// শুরু করুন
+loadNewsFirestore();
+</script>
+
+</body>
+</html>

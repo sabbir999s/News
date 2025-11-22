@@ -82,8 +82,9 @@
  
   </nav>
 
-  <script>
-   // withdraw.html-এর জন্য সম্পূর্ণ JavaScript
+ <script>
+// withdraw.html এর ফিক্সড স্ক্রিপ্ট
+
 const firebaseConfig = {
     apiKey: "AIzaSyBQf-ILFW6jDV-c_O2LG6elA5oAB84p2XQ",
     authDomain: "top-news-91db8.firebaseapp.com",
@@ -93,431 +94,177 @@ const firebaseConfig = {
     messagingSenderId: "348369077928",
     appId: "1:348369077928:web:7629c503c30cbf7450649d",
     measurementId: "G-7GMX8N2NSC"
-  };
+};
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-
 const tg = window.Telegram.WebApp;
-tg.ready();
-tg.expand();
+tg.ready(); tg.expand();
 
-// 🔥 ইউজার আইডি নিশ্চিত করা
 const user = tg.initDataUnsafe.user;
 const userId = user?.id.toString() || 'unknown';
 const userRef = db.collection('users').doc(userId);
 let userData = {};
 
-// 🔥 ফোন ইনপুট এলিমেন্ট
+// ইনপুট ভ্যালিডেশন (০ দিয়ে শুরু হবে না)
 const phoneNumberInput = document.getElementById('phone-number');
 const zeroErrorMessage = document.getElementById('zero-error-message');
-phoneNumberInput.setAttribute('inputmode', 'numeric');
-phoneNumberInput.setAttribute('pattern', '[0-9]*');
 
-// 🔥 জিরো (0) চেক এবং মেসেজ লজিক
 phoneNumberInput.addEventListener('input', function(e) {
-  this.value = this.value.replace(/[^0-9]/g, ''); 
-  
-  if (this.value.length === 1 && this.value[0] === '0') {
-      this.value = ''; 
-      zeroErrorMessage.textContent = '⛔ শূন্য (0) দিয়ে শুরু করা যাবে না। শূন্য ছাড়া লিখুন।';
-      zeroErrorMessage.style.display = 'block';
-  } else {
-      zeroErrorMessage.textContent = '';
-      zeroErrorMessage.style.display = 'none';
-  }
+    this.value = this.value.replace(/[^0-9]/g, ''); 
+    if (this.value.length > 0 && this.value.startsWith('0')) {
+        this.value = this.value.substring(1); // ০ রিমুভ
+        zeroErrorMessage.textContent = '⚠️ নাম্বারের শুরুতে ০ দিবেন না।';
+        zeroErrorMessage.style.display = 'block';
+    } else {
+        zeroErrorMessage.style.display = 'none';
+    }
 });
 
-// গ্লোবাল নেভিগেশন ফাংশন (CSS অপরিবর্তিত রাখতে)
-function goToHome() { window.location.href = 'index.html'; }
-function goToSupport() { window.location.href = 'support.html'; }
-function goToNews() { window.location.href = 'News.html'; }
-function goToWithdraw() { window.location.href = 'withdraw.html'; }
-function goToProfile() { window.location.href = 'profile.html'; }
+// নেভিগেশন
+// 🔥 নেভিগেশন ফিক্স: window.location.href কলকে setTimeout-এ রাখা হলো
+function goToHome() { setTimeout(() => window.location.href = 'index.html', 0); }
+function goToSupport() { setTimeout(() => window.location.href = 'support.html', 0); }
+function goToNews() { setTimeout(() => window.location.href = 'news.html', 0); } // নামের বানান ঠিক করা হয়েছে
+function goToWithdraw() { setTimeout(() => window.location.href = 'withdraw.html', 0); }
+function goToProfile() { setTimeout(() => window.location.href = 'profile.html', 0); }
+// 🔥 নেভিগেশন ফিক্স শেষ
 
-// 🔥 কান্ট্রি কনফিগ
+// কান্ট্রি কনফিগ
 const countries = {
-  bd: { 
-    code: '+880', 
-    maxLength: 10, 
-    methods: ['bKash', 'Nagad'], 
-    methodNames: { bKash: 'বিকাশ', Nagad: 'নগদ' },
-    placeholder: 'শূন্য ছাড়া দশটি নাম্বার দিন'
-  },
-  pk: { 
-    code: '+92', 
-    maxLength: 10, 
-    methods: ['JazzCash'], 
-    methodNames: { JazzCash: 'JazzCash' },
-    placeholder: 'Please enter your phone number 10 digits'
-  },
-  in: { 
-    code: '+91', 
-    maxLength: 10, 
-    methods: ['Paytm'], 
-    methodNames: { Paytm: 'Paytm' },
-    placeholder: 'Please enter your phone number 10 digits'
-  }
+  bd: { code: '+880', maxLength: 10, methods: ['bKash', 'Nagad'], methodNames: { bKash: 'বিকাশ', Nagad: 'নগদ' } },
+  pk: { code: '+92', maxLength: 10, methods: ['JazzCash'], methodNames: { JazzCash: 'JazzCash' } },
+  in: { code: '+91', maxLength: 10, methods: ['Paytm'], methodNames: { Paytm: 'Paytm' } }
 };
 let selectedCountry = 'bd';
 let selectedMethod = 'bKash';
 let selectedAmount = 100;
 
-
-// 🔥🔥🔥 নতুন ফিক্স: সুপার-রোবাস্ট, অটো-ডিসমিসিং টোস্ট নোটিফিকেশন
-function showSuccessNotification(transactionId) {
-    // আগের নোটিফিকেশনকে সরিয়ে দেওয়া হলো
-    const existingToast = document.getElementById('success-toast');
-    if (existingToast) {
-        existingToast.remove();
-    }
-    
-    // ন্যূনতম ইনলাইন স্টাইল সহ HTML (যা কোনো CSS ফাইল ছাড়াই কাজ করবে)
-    const toastHTML = `
-        <div id="success-toast" style="
-            position: fixed; 
-            top: 50%; 
-            left: 50%; 
-            transform: translate(-50%, -50%); 
-            z-index: 999999; /* সর্বোচ্চ Z-Index */
-            background: rgba(0, 0, 0, 0.95); /* গাঢ় ব্যাকগ্রাউন্ড */
-            color: #00ff88; /* সবুজ টেক্সট */
-            padding: 20px 30px; 
-            border-radius: 15px; 
-            text-align: center;
-            border: 2px solid #00ff88;
-            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
-            font-size: 20px;
-            font-weight: bold;
-            opacity: 1;
-            transition: opacity 0.3s ease-in-out;
-            pointer-events: none; /* যাতে এটি নিচের বাটনগুলিকে ব্লক না করে */
-            width: auto;
-            min-width: 250px;
-        ">
-            ✅ উইড্রো সাকসেসফুল!<br>
-            <span style="font-size: 14px; font-weight: normal; color: #e0f7ff;">Req ID: ${transactionId}</span>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', toastHTML);
-    const toastElement = document.getElementById('success-toast');
-
-    // 🔥 ৩ সেকেন্ড পর অটোমেটিক রিমুভ করে দেওয়া হবে
-    setTimeout(() => {
-        if (toastElement) {
-            toastElement.style.opacity = '0'; // ফেইড আউট
-            setTimeout(() => {
-                toastElement.remove(); // রিমুভ
-            }, 300); 
-        }
-    }, 3000); // ৩ সেকেন্ড
-}
-
-
-// ব্যান পপ-আপ (অপরিবর্তিত)
-function showBanPopup(isBanned, bannedUntil) {
-  let message = '';
-  let title = '⛔️ একাউন্ট ব্যানড!';
-  if (isBanned) {
-    message = 'আপনার একাউন্ট স্থায়ীভাবে ব্যান করা হয়েছে। অনুগ্রহ করে সাপোর্টে যোগাযোগ করুন।';
-  } else if (bannedUntil) {
-    title = '⏸ একাউন্ট সাসপেন্ডড!';
-    const dateStr = bannedUntil.toLocaleDateString('bn-BD', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    message = `আপনার একাউন্টটি সাময়িকভাবে সাসপেন্ড করা হয়েছে। সাসপেনশন শেষ হবে: <strong>${dateStr}</strong>।`;
-  }
-  
-  // এই পপআপের জন্য ইনলাইন স্টাইল রাখা হলো, যাতে এটি আগের পপআপের সাথে সংঘর্ষ না করে
-  const popupHTML = `
-    <div id="dynamic-popup-overlay" class="popup-overlay" style="
-        position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
-        background: rgba(0, 0, 0, 0.9); z-index: 9999; display: flex; 
-        justify-content: center; align-items: center; backdrop-filter: blur(8px);">
-      <div class="popup-card" style="
-        background: var(--card-bg); padding: 30px; border-radius: 20px; 
-        width: 90%; max-width: 350px; text-align: center; border: 2px solid var(--neon);
-        box-shadow: 0 0 40px rgba(0, 170, 255, 0.7);">
-        <h2 style="color: #ff4444; margin-bottom: 15px; font-size: 20px;">${title}</h2>
-        <p style="color: var(--text); font-size: 16px; line-height: 1.6;">${message}</p>
-        <button id="popup-btn" class="btn-primary" style="margin-top: 25px; width: 100%; background: #ff4444;">Close App</button>
-      </div>
-    </div>
-  `;
-  document.body.insertAdjacentHTML('beforeend', popupHTML);
-  document.getElementById('balance').textContent = 'FREEZED'; 
-  document.getElementById('withdrawable-balance').textContent = 'FREEZED'; 
-  tg.BackButton.hide();
-  document.getElementById('popup-btn').onclick = () => tg.close();
-}
-
-
-// রিয়েলটাইম আপডেট ও ব্যান চেক
-userRef.onSnapshot(doc => {
-  if (doc.exists) {
-    userData = doc.data();
-    const balance = userData.balance || 0;
-    document.getElementById('balance').textContent = balance;
-    document.getElementById('withdrawable-balance').textContent = `${balance}৳`;
-    
-    // ব্যান/সাসপেন্ড চেক
-    const isBanned = userData.isBanned || false;
-    const bannedUntil = userData.bannedUntil?.toDate();
-    const isSuspended = bannedUntil && bannedUntil > new Date();
-    
-    if (isBanned || isSuspended) {
-      showBanPopup(isBanned, bannedUntil);
-      return;
-    }
-  }
-});
-
-
-// উইথড্র হিস্টরি লোড ফাংশন (অপরিবর্তিত)
-function loadHistory() {
-  db.collection('withdraws').where('userId', '==', userId).orderBy('timestamp', 'desc').onSnapshot(snapshot => {
-    const list = document.getElementById('history-list');
-    list.innerHTML = '';
-    
-    if (snapshot.empty) {
-        list.innerHTML = '<p class="no-history">এখনও কোনো উইথড্র রিকোয়েস্ট করেননি।</p>';
-        return;
-    }
-    
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      
-      let statusText = data.status.toUpperCase();
-      let statusColor;
-      if (data.status === 'paid') {
-          statusColor = '#00ff88'; 
-          statusText = 'পেইড';
-      } else if (data.status === 'pending') {
-          statusColor = '#ffaa00'; 
-          statusText = 'পেন্ডিং';
-      } else if (data.status === 'rejected') {
-          statusColor = '#ff4444'; 
-          statusText = 'রিজেক্টেড';
-      } else {
-          statusColor = '#88cfff';
-      }
-      
-      const timeStr = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' }) : 'সময় নেই';
-      
-      const item = document.createElement('div');
-      item.className = 'history-item';
-      
-      item.innerHTML = `
-        <div class="item-details">
-          <p class="item-title"><strong>${data.method}</strong> (${data.amount}৳)</p>
-          <p class="item-id">Req ID: ${data.transactionId}</p>
-          <p class="item-id">ফোন: ${data.phone}</p>
-        </div>
-        <div class="item-status-group">
-          <p class="item-time">${timeStr}</p>
-          <p class="item-status" style="color:${statusColor};">
-            ${statusText}
-          </p>
-        </div>
-      `;
-      list.appendChild(item);
-    });
-  });
-}
-
-// অ্যামাউন্ট সিলেক্টর তৈরি করা (অপরিবর্তিত)
-function loadAmountSelector() {
-  const container = document.getElementById('amount-selector-container');
-  const amounts = [100, 200, 500, 1000, 2000, 5000, 10000];
-  
-  const selectorDiv = document.createElement('div');
-  selectorDiv.className = 'amount-selector-grid';
-  
-  amounts.forEach(amount => {
-    const btn = document.createElement('button');
-    btn.className = 'amount-btn';
-    btn.textContent = `${amount}৳`;
-    btn.dataset.amount = amount;
-    
-    if (amount === selectedAmount) {
-      btn.classList.add('active');
-    }
-    
-    btn.onclick = () => {
-      selectorDiv.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      selectedAmount = amount;
-      document.getElementById('amount').value = amount;
-    };
-    selectorDiv.appendChild(btn);
-  });
-  
-  const hiddenInput = container.querySelector('#amount');
-  container.innerHTML = '';
-  container.appendChild(hiddenInput);
-  container.appendChild(selectorDiv);
-}
-
-
-// মেথড লোড (অপরিবর্তিত)
+// মেথড লোডার
 function loadMethods(config) {
   const group = document.getElementById('method-group');
   group.innerHTML = '';
   selectedMethod = config.methods[0]; 
-
   config.methods.forEach(method => {
     const btn = document.createElement('button');
-    btn.className = 'method-btn';
-    btn.dataset.method = method;
+    btn.className = 'method-btn ' + (method === selectedMethod ? 'active' : '');
     btn.textContent = config.methodNames[method];
-    if (method === config.methods[0]) btn.classList.add('active');
-    
     btn.onclick = () => {
-      group.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       selectedMethod = method;
     };
     group.appendChild(btn);
   });
-  
-  phoneNumberInput.placeholder = config.placeholder;
-  phoneNumberInput.maxLength = config.maxLength;
-}
-
-
-// কান্ট্রি চেঞ্জ (অপরিবর্তিত)
-document.getElementById('country-select').onchange = (e) => {
-  selectedCountry = e.target.value;
-  const config = countries[selectedCountry];
   document.getElementById('country-code').textContent = config.code;
-  phoneNumberInput.value = '';
-  loadMethods(config);
-};
-
-// ট্রানজেকশন আইডি জেনারেট (অপরিবর্তিত)
-function generateTransactionId() {
-  const timestampPart = Date.now().toString().slice(-8); 
-  const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase(); 
-  return 'TXN-' + timestampPart + '-' + randomPart;
+  phoneNumberInput.maxLength = config.maxLength;
+  phoneNumberInput.placeholder = `${config.maxLength} ডিজিট নাম্বার দিন`;
 }
 
-
-// 🔥 ফিক্সড লজিক: ফায়ার অ্যান্ড ফরগেট
-document.getElementById('withdraw-btn').onclick = () => {
-  const status = document.getElementById('status-message');
-  const phone = phoneNumberInput.value.trim();
-  const amount = selectedAmount; 
-  
-  status.textContent = ''; 
-  
-  // ক্লায়েন্ট সাইড চেক
-  if (userData.isBanned || (userData.bannedUntil && userData.bannedUntil.toDate() > new Date())) {
-    status.textContent = 'আপনার একাউন্ট ফ্রিজ করা আছে। উইথড্র সম্ভব নয়।';
-    status.style.color = '#ff4444';
-    return;
-  }
-  
-  if (isNaN(amount) || amount < 100) {
-    status.textContent = 'উইথড্র পরিমাণ মিনিমাম ১০০ টাকা হতে হবে!';
-    status.style.color = '#ff4444';
-    return;
-  }
-
-  const config = countries[selectedCountry];
-  if (phone.length !== config.maxLength) {
-    status.textContent = `নাম্বার হতে হবে ${config.maxLength} ডিজিট!`;
-    status.style.color = '#ff4444';
-    return;
-  }
-
-  if (phone.startsWith('0')) {
-      status.textContent = `নাম্বার শূন্য (0) দিয়ে শুরু করা যাবে না।`;
-      status.style.color = '#ff4444';
-      return;
-  }
-
-  // ব্যালেন্স ও রেফারেল চেক করার জন্য ডেটাবেস গেট
-  userRef.get().then(doc => {
-    const data = doc.data();
-    const balance = data.balance || 0;
-    const referrals = data.referrals || 0; // 🔥🔥🔥 নতুন যোগ: রেফারেল সংখ্যা
+// এমাউন্ট সিলেক্টর
+function loadAmountSelector() {
+    const container = document.getElementById('amount-selector-container');
+    // আগের বাটন থাকলে ক্লিয়ার
+    container.innerHTML = '<input type="hidden" id="amount" value="100" />';
     
-    const MIN_REFERRALS = 10;
+    const grid = document.createElement('div');
+    grid.className = 'amount-selector-grid';
+    [100, 200, 500, 1000].forEach(amt => {
+        const btn = document.createElement('button');
+        btn.className = 'amount-btn ' + (amt === 100 ? 'active' : '');
+        btn.textContent = `${amt}৳`;
+        btn.onclick = () => {
+            document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedAmount = amt;
+        };
+        grid.appendChild(btn);
+    });
+    container.appendChild(grid);
+}
+
+// উইথড্র বাটন লজিক
+document.getElementById('withdraw-btn').onclick = async () => {
+    const status = document.getElementById('status-message');
+    const phone = phoneNumberInput.value.trim();
+    status.textContent = '';
+
+    if (userData.isBanned) {
+        status.textContent = 'একাউন্ট ব্যানড!'; status.style.color = 'red'; return;
+    }
     
-    // 🔥🔥🔥 নতুন রেফারেল চেক: ন্যূনতম ১০ জন রেফারেল প্রয়োজন
-    if (referrals < MIN_REFERRALS) {
-        status.textContent = `উইথড্র করার জন্য আপনার কমপক্ষে ${MIN_REFERRALS} জন রেফারেল প্রয়োজন। আপনার আছে: ${referrals} জন।`;
-        status.style.color = '#ff4444';
+    const config = countries[selectedCountry];
+    if (phone.length !== config.maxLength) {
+        status.textContent = `নাম্বারটি অবশ্যই ${config.maxLength} ডিজিটের হতে হবে।`;
+        status.style.color = 'red';
         return;
     }
 
-    // ব্যালেন্স চেক
-    if (amount > balance) {
-      status.textContent = 'অপর্যাপ্ত ব্যালেন্স!';
-      status.style.color = '#ff4444';
-      return;
+    // ডাটাবেস চেক
+    const doc = await userRef.get();
+    const data = doc.data();
+    const balance = data.balance || 0;
+    const referrals = data.referCount || 0; // referCount ফিল্ড চেক করা হলো
+
+    if (balance < selectedAmount) {
+        status.textContent = 'পর্যাপ্ত ব্যালেন্স নেই!'; status.style.color = 'red'; return;
+    }
+    if (referrals < 10) {
+        status.textContent = `উইথড্র করতে মিনিমাম ১০ রেফার লাগবে। আপনার আছে: ${referrals}`; status.style.color = 'red'; return;
     }
 
-    const transactionId = generateTransactionId();
+    // উইথড্র প্রসেস
+    const txnId = 'TXN-' + Date.now().toString().slice(-6);
     
-    // ১. ব্যালেন্স ডেবিট (ফায়ার অ্যান্ড ফরগেট - এরর কনসোলে যাবে, ইউজারকে দেখাবে না)
-    userRef.update({
-        balance: firebase.firestore.FieldValue.increment(-amount)
-    }).catch(e => console.error("Balance update failed (ignored for user experience):", e));
+    try {
+        await db.collection('withdraws').add({
+            userId: userId,
+            amount: selectedAmount,
+            method: selectedMethod,
+            phone: config.code + phone,
+            status: 'pending',
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            transactionId: txnId
+        });
 
-    // ২. উইথড্র রিকোয়েস্ট তৈরি (ফায়ার অ্যান্ড ফরগেট - এরর কনসোলে যাবে, ইউজারকে দেখাবে না)
-    db.collection('withdraws').add({
-        userId: userId, 
-        userTelegramId: user?.username || 'N/A', 
-        amount: amount,
-        method: selectedMethod,
-        phone: config.code + phone,
-        country: selectedCountry,
-        status: 'pending',
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        transactionId: transactionId,
-        actionTime: null
-    }).catch(e => console.error("Withdraw add failed (ignored for user experience):", e));
+        // ব্যালেন্স কাটা
+        await userRef.update({
+            balance: firebase.firestore.FieldValue.increment(-selectedAmount)
+        });
 
-    
-    // ৩. তাৎক্ষণিক সাফল্যের প্রতিক্রিয়া (এটি কাজ করছে)
-    status.innerHTML = `রিকোয়েস্ট পাঠানো হয়েছে!<br>ট্রানজেকশন: <strong>${transactionId}</strong>`;
-    status.style.color = '#00ff88';
-
-    phoneNumberInput.value = '';
-    
-    // 🔥 আপনার চাওয়া নোটিফিকেশনটি কল করা হলো (সর্বোচ্চ ভিজিবিলিটির জন্য)
-    showSuccessNotification(transactionId); 
-    
-    // Telegram-এর বিল্ট-ইন অ্যালার্টটিও দেখানো হলো, যদি উপরের কাস্টম নোটিফিকেশন আবার কাজ না করে।
-    tg.showAlert("উইথড্র রিকোয়েস্ট সফলভাবে পাঠানো হয়েছে।");
-  });
+        status.innerHTML = `সফল! ট্রানজেকশন আইডি: ${txnId}`;
+        status.style.color = 'green';
+        phoneNumberInput.value = '';
+        tg.showAlert('উইথড্র রিকোয়েস্ট সফল হয়েছে!');
+        
+    } catch (e) {
+        console.error(e);
+        status.textContent = 'সার্ভার এরর, পরে চেষ্টা করুন।';
+    }
 };
 
+// কান্ট্রি চেঞ্জ
+document.getElementById('country-select').onchange = (e) => {
+    selectedCountry = e.target.value;
+    loadMethods(countries[selectedCountry]);
+};
 
-// প্রথম লোড
-loadMethods(countries[selectedCountry]);
-loadAmountSelector(); 
-loadHistory(); 
-
-
-// নাম + ছবি
-document.getElementById('user-name').textContent = user?.first_name || 'অজানা';
-const avatar = document.getElementById('user-avatar');
-if (user?.photo_url) {
-  avatar.src = user.photo_url + '?size=big';
-} else {
-  const initial = (user?.first_name?.[0] || 'U').toUpperCase();
-  avatar.src = `https://ui-avatars.com/api/?name=${initial}&background=00aaff&color=fff&size=128&bold=true`;
-}
-
-
-// ব্যাক বাটন
-tg.BackButton.show();
-tg.onEvent('backButtonClicked', () => {
-  window.location.href = 'index.html';
+// ইউজার ডাটা লোড
+userRef.onSnapshot(doc => {
+    if(doc.exists) {
+        userData = doc.data();
+        document.getElementById('balance').textContent = userData.balance || 0;
+        document.getElementById('withdrawable-balance').textContent = (userData.balance || 0) + '৳';
+    }
 });
 
-  </script>
+// ইনিশিয়ালাইজ
+loadMethods(countries['bd']);
+loadAmountSelector();
+document.getElementById('user-name').textContent = user?.first_name || 'User';
+
+</script>
+
 
 </body>
 </html>

@@ -63,7 +63,7 @@
   
    
   <script>
-   // index.html-এর জন্য সম্পূর্ণ নতুন JavaScript
+// index.html-এর জন্য সম্পূর্ণ নতুন JavaScript
    const firebaseConfig = {
     apiKey: "AIzaSyBQf-ILFW6jDV-c_O2LG6elA5oAB84p2XQ",
     authDomain: "top-news-91db8.firebaseapp.com",
@@ -106,11 +106,13 @@ async function getCountryData() {
 // 🔥 নতুন কোড যোগ করা শেষ: কান্ট্রি ডেটা লোড করার ফাংশন
 
 // গ্লোবাল নেভিগেশন ফাংশন (CSS অপরিবর্তিত রাখতে)
-function goToHome() { window.location.href = 'index.html'; }
-function goToSupport() { window.location.href = 'support.html'; }
-function goToNews() { window.location.href = 'news.html'; }
-function goToWithdraw() { window.location.href = 'withdraw.html'; }
-function goToProfile() { window.location.href = 'profile.html'; }
+// 🔥 নেভিগেশন ফিক্স: window.location.href কলকে setTimeout-এ রাখা হলো
+function goToHome() { setTimeout(() => window.location.href = 'index.html', 0); }
+function goToSupport() { setTimeout(() => window.location.href = 'support.html', 0); }
+function goToNews() { setTimeout(() => window.location.href = 'news.html', 0); }
+function goToWithdraw() { setTimeout(() => window.location.href = 'withdraw.html', 0); }
+function goToProfile() { setTimeout(() => window.location.href = 'profile.html', 0); }
+// 🔥 নেভিগেশন ফিক্স শেষ
 
 // রিয়েল-টাইম ব্যালেন্স আপডেট ও ব্যান চেক
 function setupRealtimeUpdates() {
@@ -364,15 +366,18 @@ userRef.get().then(async doc => {
     // ⭐ রেফারেল ফিক্সড লজিক: 'startapp=' চেক করা
     if (startParam) {
       // ধরে নিচ্ছি রেফারেল লিংক ফরম্যাট: /app?startapp=REFERRER_ID
+      // পরবর্তীতে invite_ সহ চেক হবে
       referrerId = startParam; 
     }
     
-// 🔥 নতুন কোড যোগ করা শুরু: কান্ট্রি লোড করা এবং রেফারেল ID ফিক্স
-    const country = await getCountryData(); // কান্ট্রি ডেটা অ্যাসিঙ্ক্রোনাসলি লোড করা হলো
+// 🔥 নতুন কোড যোগ করা শুরু: কান্ট্রি লোড করা non-blocking করা এবং রেফারেল ID ফিক্স
+    // কান্ট্রি ডেটা অ্যাসিঙ্ক্রোনাসলি লোড করা (await বাদ দেওয়া হয়েছে, যাতে ইনিশিয়ালাইজেশন ব্লক না হয়)
+    const countryPromise = getCountryData(); 
+    
     if (startParam && startParam.startsWith('invite_')) { // সঠিক রেফারেল প্যারামিটার চেক
         referrerId = startParam.split('invite_')[1];
     }
-// 🔥 নতুন কোড যোগ করা শেষ: কান্ট্রি লোড করা এবং রেফারেল ID ফিক্স
+// 🔥 নতুন কোড যোগ করা শেষ: কান্ট্রি লোড করা non-blocking করা এবং রেফারেল ID ফিক্স
     
     // নতুন ইউজার ডাটা (শুরুতে ০ ব্যালেন্স)
     const userData = {
@@ -389,13 +394,20 @@ userRef.get().then(async doc => {
       registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
       lastSeen: firebase.firestore.FieldValue.serverTimestamp()
 // 🔥 নতুন কোড যোগ করা শুরু: ইউজার ডেটা ফিল্ড যোগ
-      ,country: country, // ইউজার এর কান্ট্রি যোগ হলো
+      ,country: 'N/A', // প্রাথমিক কান্ট্রি N/A সেট করা হলো 
       points: 50 // প্রাথমিক পয়েন্ট যোগ হলো
 // 🔥 নতুন কোড যোগ করা শেষ: ইউজার ডেটা ফিল্ড যোগ
     };
     
     // সেভ
-    userRef.set(userData).then(setupRealtimeUpdates).catch(e => console.error(e));
+    userRef.set(userData).then(async () => {
+        // 🔥 নন-ব্লকিং ফিক্স: কান্ট্রি ডেটা পাওয়ার পর ফায়ারবেস আপডেট
+        const country = await countryPromise;
+        if (country !== 'N/A') {
+            userRef.update({ country: country }).catch(e => console.warn("Failed to update country:", e));
+        }
+        setupRealtimeUpdates();
+    }).catch(e => console.error(e));
 
   } else {
     // পুরনো ইউজার
@@ -508,6 +520,8 @@ document.getElementById('share-btn').onclick = () => {
 
 
   </script>
+
+
 
 </body>
 </html>

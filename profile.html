@@ -330,12 +330,14 @@
         tg.close();
     }
 
-    // নেভিগেশন ফাংশন
-    function goToHome() { window.location.href = 'index.html'; }
-    function goToSupport() { window.location.href = 'support.html'; }
-    function goToNews() { window.location.href = 'news.html'; }
-    function goToWithdraw() { window.location.href = 'withdraw.html'; }
-    function goToProfile() { window.location.href = 'profile.html'; }
+    // নেভিগেশন
+// 🔥 নেভিগেশন ফিক্স: window.location.href কলকে setTimeout-এ রাখা হলো
+function goToHome() { setTimeout(() => window.location.href = 'index.html', 0); }
+function goToSupport() { setTimeout(() => window.location.href = 'support.html', 0); }
+function goToNews() { setTimeout(() => window.location.href = 'news.html', 0); } // নামের বানান ঠিক করা হয়েছে
+function goToWithdraw() { setTimeout(() => window.location.href = 'withdraw.html', 0); }
+function goToProfile() { setTimeout(() => window.location.href = 'profile.html', 0); }
+// 🔥 নেভিগেশন ফিক্স শেষ
 
     // অ্যাপ লোড
     document.addEventListener('DOMContentLoaded', loadProfileData);

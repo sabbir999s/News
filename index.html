@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Red Rose 🌹</title>
+  <title>Home - Headline</title>
   <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -16,19 +16,40 @@
     <div class="card profile-header">
       <img id="user-avatar" src="" alt="Avatar" class="avatar" />
       <div class="user-info">
-        <div class="name-row">
-          <p id="user-name" class="username">লোড হচ্ছে...</p>
-          <div class="verified-badge">Verified</div>
+    <div class="name-row">
+      
+      <span id="user-name" class="username">লোড হচ্ছে...</span> 
+      
+      <div class="verified-badge">Verified</div>  
+            
+    </div>
+        <div>
+        <span id="username" class="username">লোড হচ্ছে...</span>
         </div>
-        <p class="balance">Balance: <span id="balance">0</span>৳</p>
-      </div>
+        <div>
+      <span id="user-id" class="username">লোড হচ্ছে...</span>
+          
+        </div>
+</div>
+
+      
     </div>
   </header>
 
   <main class="main-content">
     <h1>Dashboard</h1>
 
+    
+    
+    </div>
+    
+  
     <div class="stats-grid">
+      <div class="stat-card">
+        <p class="balance">Balance</p>
+        <h2 class="stat-value" id="balance">0</h2>
+      </div>
+      
       <div class="stat-card">
         <p class="stat-label">Daily Ads Watched</p>
         <h2 class="stat-value" id="ads-watched">0 / 10</h2>
@@ -57,14 +78,7 @@
     </div>
   </main>
 
-  <nav class="bottom-nav">
-  <button class="nav-item active">Home</button>
-  <button class="nav-item" onclick="goToSupport()">Support</button>
-  <button class="nav-item" onclick="goToNews()">News</button>
-  <button class="nav-item"onclick="goToWithdraw()">Withdraw</button>
-   <button class="nav-item" onclick="goToProfile()">Profile</button>
-
-  </nav>
+  
   
    
   <script>
@@ -547,6 +561,30 @@ document.getElementById('share-btn').onclick = () => {
         });
     }
 };
+// ⭐⭐ [ইউজার ইনফো লোড ফাংশনালিটি] ⭐⭐
+
+document.addEventListener('DOMContentLoaded', () => {
+    // ১. id="username" এবং id="user-id" এ ডেটা লোড
+    const displayUsername = user?.username ? `@${user.username}` : 'N/A';
+    const displayUserId = userId; 
+
+    const usernameElement = document.getElementById('username');
+    if (usernameElement) {
+        usernameElement.textContent = displayUsername;
+    }
+
+    const userIdElement = document.getElementById('user-id');
+    if (userIdElement) {
+        // ID: প্রিফিক্স সহ ইউজার আইডি ডিসপ্লে
+        userIdElement.textContent = `ID: ${displayUserId}`;
+
+        // কপি বাটন তৈরি ও যোগ করার সম্পূর্ণ অংশ সরিয়ে দেওয়া হলো।
+        
+        // কপি বাটনের লজিক অংশটিও সরিয়ে দেওয়া হলো।
+    }
+});
+
+
 
 // 🔥 [নতুন কোড যোগ করা শেষ]
 
@@ -556,4 +594,14 @@ document.getElementById('share-btn').onclick = () => {
 
 
 </body>
+  
+  
+  <nav class="bottom-nav">
+  <button class="nav-item active">Home</button>
+  <button class="nav-item" onclick="goToSupport()">Support</button>
+  <button class="nav-item" onclick="goToNews()">News</button>
+  <button class="nav-item"onclick="goToWithdraw()">Withdraw</button>
+   <button class="nav-item" onclick="goToProfile()">Profile</button>
+
+  </nav>
 </html>

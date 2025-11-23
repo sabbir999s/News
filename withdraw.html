@@ -1,259 +1,486 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Withdraw - Red Rose 🌹</title>
-  <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet - Headline</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script> 
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script> 
+    <style>
+        /* ওয়ালেট পেজের জন্য কাস্টম স্টাইল - style.css এর ডিজাইন অনুসরণ করে */
+        /* মূল স্টাইলগুলো style.css এ থাকবে। শুধুমাত্র এই পেজের ইউনিক স্টাইলগুলো এখানে রাখা হয়েছে। */
+        
+        .wallet-balance-card {
+            /* style.css এর কার্ড থিম অনুযায়ী আপডেট করা হয়েছে */
+            background: linear-gradient(145deg, #6c5ce7, #5849c2); /* primary color gradient */
+            color: white;
+            padding: 25px;
+            border-radius: var(--radius-card);
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-outer);
+        }
+
+        .wallet-balance-card h3 {
+            font-size: 16px;
+            margin-bottom: 5px;
+            font-weight: normal;
+        }
+
+        .wallet-balance-card p {
+            font-size: 32px;
+            font-weight: bold;
+        }
+        
+        /* পয়েন্ট ডিসপ্লে স্টাইল */
+        .wallet-points-card {
+            background: var(--bg-card); /* সাধারণ কার্ড ব্যাকগ্রাউন্ড */
+            color: var(--text-main);
+            padding: 20px;
+            border-radius: var(--radius-card);
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-outer);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .wallet-points-card h4 {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+        
+        .wallet-points-card p {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--success); /* পয়েন্টের জন্য সফলতার কালার */
+        }
+
+        .select-group {
+            margin-bottom: 15px;
+        }
+        
+        /* ইনপুট/সিলেক্ট ফিল্ড স্টাইল style.css থেকে নেওয়া হয়েছে */
+        .select-group select {
+            width: 100%;
+            background: var(--bg-body);
+            border: none;
+            padding: 14px;
+            border-radius: var(--radius-btn);
+            color: var(--text-main);
+            font-size: 15px;
+            box-shadow: var(--shadow-inner);
+            outline: none;
+        }
+        
+        .select-group label {
+            display: block;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05); /* ডার্ক থিম বর্ডার */
+            color: var(--text-main);
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+        
+        .history-item p {
+            margin: 0;
+        }
+
+        .status-tag {
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #000; /* ট্যাগ টেক্সট কালো */
+        }
+
+        /* স্ট্যাটাস ট্যাগ কালার ডার্ক থিমে সামঞ্জস্যপূর্ণ করা হয়েছে */
+        .status-pending { background-color: #fdd835; } /* amber */
+        .status-paid { background-color: #00b894; } /* success */
+        .status-rejected { background-color: #ff7675; } /* danger */
+        
+        .address-box {
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        .address-box input {
+            padding-right: 60px !important; 
+        }
+
+        .btn-paste {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 5px 10px;
+            background-color: var(--primary); /* primary color */
+            color: white;
+            border-radius: 0 var(--radius-btn) var(--radius-btn) 0;
+            border: none;
+            cursor: pointer;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            font-size: 16px;
+        }
+        
+        /* নেভিগেশন বারের ফিক্স */
+        .nav-bar {
+            display: none; /* বটম-নেভ ব্যবহার করার জন্য এইটা লুকানো হলো */
+        }
+        
+    </style>
 </head>
 <body>
-
-  
-
-  <main class="main-content">
-    <h1>Withdraw</h1>
-
-    <div class="balance-card">
-      <p>উইথড্রযোগ্য ব্যালেন্স</p>
-      <h2 id="withdrawable-balance">0৳</h2>
-    </div>
-    
-    <div class="note-card">
-      <p>আপনার উইথড্রটি সফল হতে সর্বনিম্ন ১০০ টাকা ব্যালেন্স ও ১০টি রেফার প্রয়োজন
-</p>
-    </div>
-
-    <div class="country-selector">
-      <label>দেশ নির্বাচন করুন</label>
-      <select id="country-select" class="input-field">
-        <option value="bd">বাংলাদেশ (+880)</option>
-        <option value="pk">পাকিস্তান (+92)</option>
-        <option value="in">ভারত (+91)</option>
-      </select>
-    </div>
-
-    <div class="withdraw-card">
-      <h3>পেমেন্ট মেথড</h3>
-      <div class="method-group" id="method-group">
+    <div class="container">
+        
+        <div class="card profile-header" style="background: none; box-shadow: none; margin-bottom: 0; padding-bottom: 0;">
+             <h3 class="title" style="margin-bottom: 5px;">Wallet</h3>
+             <p style="color: var(--text-muted); font-size: 14px; text-align: center;">Manage your funds and withdrawals.</p>
+        </div>
+        
+        <div class="wallet-balance-card">
+            <h3>Your Current Balance</h3>
+            <p id="current-balance">Loading...</p>
+        </div>
+        
+        <div class="wallet-points-card">
+            <h4>Total Points Available</h4>
+            <p id="total-points-display">Loading...</p>
         </div>
 
-      <div class="phone-input-group">
-        <span id="country-code" class="country-code">+880</span>
-        <input type="text" id="phone-number" placeholder="মোবাইল নাম্বার" class="input-field phone-input" maxlength="10" />
-      </div>
-      
-      <p id="zero-error-message" class="status-text zero-error-text"></p>
+        <div class="card">
+            <div class="title">Withdraw Request</div>
+            
+            <div class="select-group">
+                <label for="payment-method">Select Method:</label>
+                <select id="payment-method" onchange="togglePaymentFields()">
+                    <option value="">-- Choose Payment Method --</option>
+                    <option value="bank">Bank (Bkash/Nagad/Rocket)</option>
+                    <option value="crypto">Cryptocurrency</option>
+                </select>
+            </div>
 
-      <div id="amount-selector-container" class="amount-selector-container">
-        <input type="hidden" id="amount" value="100" />
-      </div>
-      
-      <button id="withdraw-btn" class="btn-primary">উইথড্র রিকোয়েস্ট করুন</button>
-      <p id="status-message" class="status-text"></p>
-    </div>
+            <div id="bank-fields" class="hidden">
+                <div class="select-group">
+                    <label for="bank-type">Select Bank Type:</label>
+                    <select id="bank-type">
+                        <option value="bKash">bKash</option>
+                        <option value="Nagad">Nagad</option>
+                        <option value="Rocket">Rocket</option>
+                    </select>
+                </div>
+                
+                <label for="phone-number">Phone Number:</label>
+                <div class="input-field">
+                    <span style="font-weight: bold; margin-right: 5px; color: var(--text-muted);">+880</span>
+                    <input type="number" id="phone-number" placeholder="Enter 10 digits (e.g. 1xxxxxxxxx)" oninput="validateNumber(this)" maxlength="10">
+                </div>
+            </div>
 
-    <div class="history-section">
-      <h3>উইথড্র হিস্টরি</h3>
-      <div id="history-list" class="history-list"></div>
-    </div>
-  </main>
+            <div id="crypto-fields" class="hidden">
+                <div class="select-group">
+                    <label for="crypto-network">Select Network:</label>
+                    <select id="crypto-network">
+                        <option value="TRC20">USDT (TRC20)</option>
+                        <option value="ERC20">USDT (ERC20)</option>
+                        <option value="BEP20">USDT (BEP20)</option>
+                    </select>
+                </div>
+                
+                <label for="wallet-address">Wallet Address:</label>
+                <div class="input-field address-box">
+                    <input type="text" id="wallet-address" placeholder="Paste your wallet address here">
+                    <button class="btn-paste" onclick="pasteAddress()"><i class="fas fa-paste"></i></button>
+                </div>
+            </div>
 
-  <nav class="bottom-nav">
-    <button class="nav-item" onclick="goToHome()">Home</button>
-    <button class="nav-item" onclick="goToSupport()">Support</button>
-    <button class="nav-item" onclick="goToNews()">News</button>
-    <button class="nav-item active">Withdraw</button>
-     <button class="nav-item"onclick="goToProfile()">Profile</button>
- 
-  </nav>
+            <label for="withdraw-amount">Withdraw Amount:</label>
+            <div class="input-field">
+                <span id="withdraw-currency-symbol" style="font-weight: bold; margin-right: 5px; color: var(--primary);">৳</span>
+                <input type="number" id="withdraw-amount" placeholder="Minimum: 10.00" style="padding-left: 5px;">
+            </div>
 
- <script>
-// withdraw.html এর ফিক্সড স্ক্রিপ্ট
-
-const firebaseConfig = {
-    apiKey: "AIzaSyBQf-ILFW6jDV-c_O2LG6elA5oAB84p2XQ",
-    authDomain: "top-news-91db8.firebaseapp.com",
-    databaseURL: "https://top-news-91db8-default-rtdb.firebaseio.com",
-    projectId: "top-news-91db8",
-    storageBucket: "top-news-91db8.firebasestorage.app",
-    messagingSenderId: "348369077928",
-    appId: "1:348369077928:web:7629c503c30cbf7450649d",
-    measurementId: "G-7GMX8N2NSC"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const tg = window.Telegram.WebApp;
-tg.ready(); tg.expand();
-
-const user = tg.initDataUnsafe.user;
-const userId = user?.id.toString() || 'unknown';
-const userRef = db.collection('users').doc(userId);
-let userData = {};
-
-// ইনপুট ভ্যালিডেশন (০ দিয়ে শুরু হবে না)
-const phoneNumberInput = document.getElementById('phone-number');
-const zeroErrorMessage = document.getElementById('zero-error-message');
-
-phoneNumberInput.addEventListener('input', function(e) {
-    this.value = this.value.replace(/[^0-9]/g, ''); 
-    if (this.value.length > 0 && this.value.startsWith('0')) {
-        this.value = this.value.substring(1); // ০ রিমুভ
-        zeroErrorMessage.textContent = '⚠️ নাম্বারের শুরুতে ০ দিবেন না।';
-        zeroErrorMessage.style.display = 'block';
-    } else {
-        zeroErrorMessage.style.display = 'none';
-    }
-});
-
-// নেভিগেশন
-// 🔥 নেভিগেশন ফিক্স: window.location.href কলকে setTimeout-এ রাখা হলো
-function goToHome() { setTimeout(() => window.location.href = 'index.html', 0); }
-function goToSupport() { setTimeout(() => window.location.href = 'support.html', 0); }
-function goToNews() { setTimeout(() => window.location.href = 'news.html', 0); } // নামের বানান ঠিক করা হয়েছে
-function goToWithdraw() { setTimeout(() => window.location.href = 'withdraw.html', 0); }
-function goToProfile() { setTimeout(() => window.location.href = 'profile.html', 0); }
-// 🔥 নেভিগেশন ফিক্স শেষ
-
-// কান্ট্রি কনফিগ
-const countries = {
-  bd: { code: '+880', maxLength: 10, methods: ['bKash', 'Nagad'], methodNames: { bKash: 'বিকাশ', Nagad: 'নগদ' } },
-  pk: { code: '+92', maxLength: 10, methods: ['JazzCash'], methodNames: { JazzCash: 'JazzCash' } },
-  in: { code: '+91', maxLength: 10, methods: ['Paytm'], methodNames: { Paytm: 'Paytm' } }
-};
-let selectedCountry = 'bd';
-let selectedMethod = 'bKash';
-let selectedAmount = 100;
-
-// মেথড লোডার
-function loadMethods(config) {
-  const group = document.getElementById('method-group');
-  group.innerHTML = '';
-  selectedMethod = config.methods[0]; 
-  config.methods.forEach(method => {
-    const btn = document.createElement('button');
-    btn.className = 'method-btn ' + (method === selectedMethod ? 'active' : '');
-    btn.textContent = config.methodNames[method];
-    btn.onclick = () => {
-      document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      selectedMethod = method;
-    };
-    group.appendChild(btn);
-  });
-  document.getElementById('country-code').textContent = config.code;
-  phoneNumberInput.maxLength = config.maxLength;
-  phoneNumberInput.placeholder = `${config.maxLength} ডিজিট নাম্বার দিন`;
-}
-
-// এমাউন্ট সিলেক্টর
-function loadAmountSelector() {
-    const container = document.getElementById('amount-selector-container');
-    // আগের বাটন থাকলে ক্লিয়ার
-    container.innerHTML = '<input type="hidden" id="amount" value="100" />';
-    
-    const grid = document.createElement('div');
-    grid.className = 'amount-selector-grid';
-    [100, 200, 500, 1000].forEach(amt => {
-        const btn = document.createElement('button');
-        btn.className = 'amount-btn ' + (amt === 100 ? 'active' : '');
-        btn.textContent = `${amt}৳`;
-        btn.onclick = () => {
-            document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            selectedAmount = amt;
-        };
-        grid.appendChild(btn);
-    });
-    container.appendChild(grid);
-}
-
-// উইথড্র বাটন লজিক
-document.getElementById('withdraw-btn').onclick = async () => {
-    const status = document.getElementById('status-message');
-    const phone = phoneNumberInput.value.trim();
-    status.textContent = '';
-
-    if (userData.isBanned) {
-        status.textContent = 'একাউন্ট ব্যানড!'; status.style.color = 'red'; return;
-    }
-    
-    const config = countries[selectedCountry];
-    if (phone.length !== config.maxLength) {
-        status.textContent = `নাম্বারটি অবশ্যই ${config.maxLength} ডিজিটের হতে হবে।`;
-        status.style.color = 'red';
-        return;
-    }
-
-    // ডাটাবেস চেক
-    const doc = await userRef.get();
-    const data = doc.data();
-    const balance = data.balance || 0;
-    const referrals = data.referCount || 0; // referCount ফিল্ড চেক করা হলো
-
-    if (balance < selectedAmount) {
-        status.textContent = 'পর্যাপ্ত ব্যালেন্স নেই!'; status.style.color = 'red'; return;
-    }
-    if (referrals < 10) {
-        status.textContent = `উইথড্র করতে মিনিমাম ১০ রেফার লাগবে। আপনার আছে: ${referrals}`; status.style.color = 'red'; return;
-    }
-
-    // উইথড্র প্রসেস
-    const txnId = 'TXN-' + Date.now().toString().slice(-6);
-    
-    try {
-        await db.collection('withdraws').add({
-            userId: userId,
-            amount: selectedAmount,
-            method: selectedMethod,
-            phone: config.code + phone,
-            status: 'pending',
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            transactionId: txnId
-        });
-
-        // ব্যালেন্স কাটা
-        await userRef.update({
-            balance: firebase.firestore.FieldValue.increment(-selectedAmount)
-        });
-
-        status.innerHTML = `সফল! ট্রানজেকশন আইডি: ${txnId}`;
-        status.style.color = 'green';
-        phoneNumberInput.value = '';
-        tg.showAlert('উইথড্র রিকোয়েস্ট সফল হয়েছে!');
+            <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="submitWithdrawRequest()">
+                Request Withdrawal
+            </button>
+        </div>
         
-    } catch (e) {
-        console.error(e);
-        status.textContent = 'সার্ভার এরর, পরে চেষ্টা করুন।';
-    }
-};
+        <div class="card" style="margin-top: 20px;">
+            <div class="title">Withdrawal History</div>
+            <div id="history-list">
+                <div class="history-item">
+                    <div>
+                        <small style="color: var(--text-muted);">Trx ID: **TXN-123456**</small>
+                        <p style="font-size: 15px;">Bank (**bKash**): **+88017xxxxxx**</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <p style="font-weight: bold; color: var(--primary);">৳25.00</p>
+                        <span class="status-tag status-paid">Paid</span>
+                    </div>
+                </div>
+                 <div class="history-item">
+                    <div>
+                        <small style="color: var(--text-muted);">Trx ID: **TXN-789012**</small>
+                        <p style="font-size: 15px;">Crypto (**TRC20**): **Txxxxxxxx...**</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <p style="font-weight: bold; color: var(--primary);">৳100.00</p>
+                        <span class="status-tag status-pending">Pending</span>
+                    </div>
+                </div>
+                <div class="history-item">
+                    <div>
+                        <small style="color: var(--text-muted);">Trx ID: **TXN-345678**</small>
+                        <p style="font-size: 15px;">Bank (**Nagad**): **+88019xxxxxx**</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <p style="font-weight: bold; color: var(--primary);">৳50.00</p>
+                        <span class="status-tag status-rejected">Rejected</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-// কান্ট্রি চেঞ্জ
-document.getElementById('country-select').onchange = (e) => {
-    selectedCountry = e.target.value;
-    loadMethods(countries[selectedCountry]);
-};
+    <nav class="bottom-nav">
+        <button class="nav-item" onclick="goToHome()">Home</button>
+        <button class="nav-item" onclick="goToSupport()">Support</button>
+        <button class="nav-item" onclick="goToNews()">News</button>
+        <button class="nav-item active" onclick="goToWithdraw()">Withdraw</button>
+        <button class="nav-item" onclick="goToProfile()">Profile</button>
+    </nav>
 
-// ইউজার ডাটা লোড
-userRef.onSnapshot(doc => {
-    if(doc.exists) {
-        userData = doc.data();
-        document.getElementById('balance').textContent = userData.balance || 0;
-        document.getElementById('withdrawable-balance').textContent = (userData.balance || 0) + '৳';
+
+    <script>
+    
+    // 🔥 ১. ফায়ারবেস কনফিগারেশন (profile.html থেকে কপি করা)
+    const firebaseConfig = {
+        apiKey: "AIzaSyBQf-ILFW6jDV-c_O2LG6elA5oAB84p2XQ",
+        authDomain: "top-news-91db8.firebaseapp.com",
+        databaseURL: "https://top-news-91db8-default-rtdb.firebaseio.com",
+        projectId: "top-news-91db8",
+        storageBucket: "top-news-91db8.firebasestorage.app",
+        messagingSenderId: "348369077928",
+        appId: "1:348369077928:web:7629c503c30cbf7450649d",
+        measurementId: "G-7GMX8N2NSC"
+    };
+
+    // ফায়ারবেস ইনিশিলাইজ
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
     }
+    const db = firebase.firestore();
+
+    // 🔥 ২. টেলিগ্রাম ওয়েব অ্যাপ সেটআপ (profile.html থেকে কপি করা)
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    // ইউজার আইডি এবং ডাটা রেফারেন্স
+    const user = tg.initDataUnsafe.user;
+    const userId = user?.id.toString() || 'unknown'; // টেস্টিংয়ের জন্য unknown
+    const userRef = db.collection('users').doc(userId);
+    
+    // 🔥 ৩. কারেন্সি রেট এবং কনস্ট্যান্ট (profile.html থেকে কপি করা)
+    const CURRENCY_RATES = {
+        'BDT': { symbol: '৳', rate: 1.0, name: 'Bangladeshi Taka' },       
+        'USD': { symbol: '$', rate: 0.0091, name: 'US Dollar' },    
+        'INR': { symbol: '₹', rate: 0.75, name: 'Indian Rupee' },      
+        'PKR': { symbol: 'Rs', rate: 2.50, name: 'Pakistani Rupee' }      
+    };
+    
+    // ১০০০ পয়েন্ট = ১০ টাকা (BDT) 
+    const POINT_TO_BDT_RATE = 10 / 1000; 
+
+    // 🔥 ৪. রিয়েলটাইম ডাটা লিসেনার
+    function loadWalletData() {
+        userRef.onSnapshot((doc) => {
+            let balanceBDT = 0;
+            let points = 0;
+            let currencyCode = 'BDT'; // ডিফল্ট
+
+            if (doc.exists) {
+                const data = doc.data();
+                currencyCode = data.currency || 'BDT';
+                balanceBDT = data.balance || 0; // ডাটাবেসে সব সময় BDT তে ব্যালেন্স থাকবে
+                points = data.points || 0;
+            } 
+            
+            // ডিসপ্লে আপডেট করা
+            updateWalletDisplay(balanceBDT, points, currencyCode);
+            
+            // উইথড্র অ্যামাউন্টের কারেন্সি প্রতীক আপডেট করা
+            const rateData = CURRENCY_RATES[currencyCode] || CURRENCY_RATES['BDT'];
+            document.getElementById("withdraw-currency-symbol").innerText = rateData.symbol;
+            document.getElementById("withdraw-amount").placeholder = `Minimum: ${rateData.symbol}10.00`;
+        });
+    }
+
+    // 🔥 ৫. ডিসপ্লে আপডেট ফাংশন
+    function updateWalletDisplay(balanceBDT, points, currencyCode) {
+        const rateData = CURRENCY_RATES[currencyCode] || CURRENCY_RATES['BDT'];
+        
+        // ব্যালেন্স কনভার্সন
+        const convertedBalance = (balanceBDT * rateData.rate).toFixed(2);
+        
+        // পয়েন্টের ভ্যালু (টাকায়)
+        const pointsValueInBDT = points * POINT_TO_BDT_RATE;
+        // পয়েন্টের কনভার্টেড ভ্যালু
+        const pointsValueConverted = (pointsValueInBDT * rateData.rate).toFixed(2);
+
+        // HTML আপডেট - ব্যালেন্স
+        document.getElementById("current-balance").innerHTML = `${rateData.symbol}${convertedBalance} <span style="font-size: 16px; color: rgba(255,255,255,0.7);">(${currencyCode})</span>`;
+
+        // HTML আপডেট - পয়েন্ট
+        document.getElementById("total-points-display").innerHTML = `${points} Points <span style="font-size: 14px; color: var(--text-muted);">(${rateData.symbol}${pointsValueConverted})</span>`;
+    }
+    
+    // wallet.js কোডের বাকি অংশ
+    
+    // পেমেন্ট মেথড অনুযায়ী ইনপুট ক্ষেত্রগুলো দৃশ্যমান করা
+    function togglePaymentFields() {
+        const method = document.getElementById('payment-method').value;
+        const bankFields = document.getElementById('bank-fields');
+        const cryptoFields = document.getElementById('crypto-fields');
+
+        bankFields.classList.add('hidden');
+        cryptoFields.classList.add('hidden');
+
+        if (method === 'bank') {
+            bankFields.classList.remove('hidden');
+        } else if (method === 'crypto') {
+            cryptoFields.classList.remove('hidden');
+        }
+    }
+
+    // ফোন নাম্বার ভ্যালিডেশন লজিক
+    function validateNumber(input) {
+        let value = input.value;
+        
+        // ১. প্রথম সংখ্যা শূন্য হবে না 
+        if (value.length > 0 && value[0] === '0') {
+            value = value.substring(1); 
+        }
+        
+        // ২. শুধুমাত্র ইংরেজি সংখ্যা থাকবে 
+        value = value.replace(/\D/g, ''); 
+        
+        // ৩. সর্বোচ্চ ১০টি সংখ্যা
+        if (value.length > 10) {
+            value = value.substring(0, 10);
+        }
+        
+        input.value = value;
+    }
+
+    // ক্রিপ্টো এড্রেস পেস্ট করার ফাংশন
+    function pasteAddress() {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+            navigator.clipboard.readText().then(text => {
+                document.getElementById('wallet-address').value = text;
+                tg.showAlert("Address pasted successfully!");
+            }).catch(err => {
+                console.error('Failed to read clipboard contents: ', err);
+                tg.showAlert("Error: Could not paste address. Please paste manually.");
+            });
+        } else {
+            tg.showAlert("Your browser does not support automatic pasting. Please paste manually.");
+        }
+    }
+
+    // উইথড্র রিকোয়েস্ট জমা দেওয়া
+    function submitWithdrawRequest() {
+        const method = document.getElementById('payment-method').value;
+        const amount = parseFloat(document.getElementById('withdraw-amount').value);
+        
+        if (!method || amount <= 0) {
+            tg.showAlert("Please select a valid method and enter a valid amount.");
+            return;
+        }
+        
+        // ডেমো: সফল রিকোয়েস্ট দেখিয়ে হিস্টোরি আপডেট
+        const transactionId = 'TXN-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+        tg.showAlert(`Withdrawal request submitted! Trx ID: ${transactionId}`);
+        document.getElementById('payment-method').value = '';
+        document.getElementById('withdraw-amount').value = '';
+        togglePaymentFields();
+        loadWithdrawalHistory(); // হিস্টোরি আপডেট করা
+    }
+
+    // উইথড্র হিস্টোরি লোড করার ফাংশন
+    function loadWithdrawalHistory() {
+        // ডেমো হিস্টোরি ডেটা - এখানে কারেন্সি প্রতীক হার্ডকোড করা আছে, প্রোফাইল সেকশনের মতো ডাইনামিক করা প্রয়োজন। 
+        // তবে, এই ডেমো কোডের সাথে সামঞ্জস্য রাখতে শুধুমাত্র ডেমো ডেটা এবং ডিসপ্লে লজিক ব্যবহার করা হলো।
+        const historyData = [
+            { id: 'TXN-001', amount: 25.00, method: 'Bank (bKash)', status: 'Paid', detail: '+88017xxxxxx' },
+            { id: 'TXN-002', amount: 100.00, method: 'Crypto (TRC20)', status: 'Pending', detail: 'Txxxxxxxx...' },
+            { id: 'TXN-003', amount: 50.00, method: 'Bank (Nagad)', status: 'Rejected', detail: '+88019xxxxxx' },
+        ];
+        
+        const listContainer = document.getElementById('history-list');
+        listContainer.innerHTML = '';
+        
+        // ডেমো ব্যালেন্স লোড করার লজিক মুছে ফেলা হয়েছে, কারণ এটি ফায়ারবেস থেকে লোড হবে।
+        // document.getElementById('current-balance').innerText = '$1,250.00'; 
+    }
+
+    // 🔥 নেভিগেশন (profile.html থেকে কপি করা)
+    function goToHome() { setTimeout(() => window.location.href = 'index.html', 0); }
+    function goToSupport() { setTimeout(() => window.location.href = 'support.html', 0); }
+    function goToNews() { setTimeout(() => window.location.href = 'news.html', 0); } 
+    function goToWithdraw() { setTimeout(() => window.location.href = 'withdraw.html', 0); }
+    function goToProfile() { setTimeout(() => window.location.href = 'profile.html', 0); }
+    // 🔥 নেভিগেশন শেষ
+
+    const bottomNav = document.querySelector('.bottom-nav');
+const inputFields = document.querySelectorAll('input, textarea'); // আপনার ফর্ম ইনপুটগুলো
+
+inputFields.forEach(input => {
+  input.addEventListener('focus', () => {
+    // কীবোর্ড খুলছে, নেভিগেশন বার লুকিয়ে দিন বা নিচে নামিয়ে দিন
+    bottomNav.style.display = 'none'; // অথবা bottomNav.style.transform = 'translateY(100%)'; 
+  });
+
+  input.addEventListener('blur', () => {
+    // কীবোর্ড বন্ধ হচ্ছে, নেভিগেশন বার আবার দেখান
+    bottomNav.style.display = 'flex'; // বা আগের মতো transform: 'translateY(0)';
+  });
 });
 
-// ইনিশিয়ালাইজ
-loadMethods(countries['bd']);
-loadAmountSelector();
-document.getElementById('user-name').textContent = user?.first_name || 'User';
+    
+    
+    // পেজ লোড হলে সকল ফাংশন কল করা
+    document.addEventListener('DOMContentLoaded', () => {
+        // 🔥 ফায়ারবেস থেকে ডেটা লোড করা
+        loadWalletData();
+        
+        togglePaymentFields(); // প্রাথমিক অবস্থায় সব লুকানো
+        loadWithdrawalHistory(); 
+    });
 
-</script>
 
-
+    
+    </script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile - Headline News</title>
+    <title>Profile - Headline</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script> 
@@ -338,6 +338,22 @@ function goToNews() { setTimeout(() => window.location.href = 'news.html', 0); }
 function goToWithdraw() { setTimeout(() => window.location.href = 'withdraw.html', 0); }
 function goToProfile() { setTimeout(() => window.location.href = 'profile.html', 0); }
 // 🔥 নেভিগেশন ফিক্স শেষ
+    
+    const bottomNav = document.querySelector('.bottom-nav');
+const inputFields = document.querySelectorAll('input, textarea'); // আপনার ফর্ম ইনপুটগুলো
+
+inputFields.forEach(input => {
+  input.addEventListener('focus', () => {
+    // কীবোর্ড খুলছে, নেভিগেশন বার লুকিয়ে দিন বা নিচে নামিয়ে দিন
+    bottomNav.style.display = 'none'; // অথবা bottomNav.style.transform = 'translateY(100%)'; 
+  });
+
+  input.addEventListener('blur', () => {
+    // কীবোর্ড বন্ধ হচ্ছে, নেভিগেশন বার আবার দেখান
+    bottomNav.style.display = 'flex'; // বা আগের মতো transform: 'translateY(0)';
+  });
+});
+
 
     // অ্যাপ লোড
     document.addEventListener('DOMContentLoaded', loadProfileData);
